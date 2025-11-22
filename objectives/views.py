@@ -72,6 +72,7 @@ class ObjectiveDetailView(ObjectiveBaseView, generics.RetrieveUpdateDestroyAPIVi
     """
     Retrieve, edit or soft-delete an objective.
     """
+    http_method_names = ['get', 'put', 'delete']
 
     @swagger_auto_schema(operation_summary="Retrieve objective", tags=["Objectives"])
     def get(self, *args, **kwargs):
@@ -80,10 +81,6 @@ class ObjectiveDetailView(ObjectiveBaseView, generics.RetrieveUpdateDestroyAPIVi
     @swagger_auto_schema(operation_summary="Update objective", tags=["Objectives"])
     def put(self, *args, **kwargs):
         return super().put(*args, **kwargs)
-
-    @swagger_auto_schema(operation_summary="Partially update objective", tags=["Objectives"])
-    def patch(self, *args, **kwargs):
-        return super().patch(*args, **kwargs)
 
     @swagger_auto_schema(operation_summary="Soft delete objective", tags=["Objectives"])
     def delete(self, *args, **kwargs):
