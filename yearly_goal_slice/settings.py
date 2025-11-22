@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'accounts',
     'goal_calendars',
+    'objectives',
 ]
 
 MIDDLEWARE = [
