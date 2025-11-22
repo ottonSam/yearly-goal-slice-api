@@ -27,6 +27,7 @@ class GoalCalendarDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = GoalCalendarSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'put', 'delete']
 
     def get_queryset(self):
         return GoalCalendar.objects.filter(user=self.request.user, active=True)
