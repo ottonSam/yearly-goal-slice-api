@@ -17,14 +17,10 @@ class ObjectiveBaseView:
         return Objective.objects.filter(user=self.request.user, active=True)
 
 
-class ObjectiveListCreateView(ObjectiveBaseView, generics.ListCreateAPIView):
+class ObjectiveCreateView(ObjectiveBaseView, generics.CreateAPIView):
     """
-    List or create objectives for the authenticated user.
+    Create objectives for the authenticated user.
     """
-
-    @swagger_auto_schema(operation_summary="List objectives", tags=["Objectives"])
-    def get(self, *args, **kwargs):
-        return super().get(*args, **kwargs)
 
     @swagger_auto_schema(operation_summary="Create objective", tags=["Objectives"])
     def post(self, *args, **kwargs):
@@ -105,6 +101,8 @@ class ObjectiveCompleteView(ObjectiveBaseView, generics.GenericAPIView):
 
     @swagger_auto_schema(operation_summary="Complete objective", tags=["Objectives"], request_body=None)
     def post(self, request, *args, **kwargs):
+        if request.data:
+            raise ValidationError({"detail": "This endpoint does not accept a request body."})
         objective = self.get_object()
         if not objective.is_complete:
             objective.is_complete = True

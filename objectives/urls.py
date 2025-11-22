@@ -4,13 +4,13 @@ from .views import (
     ObjectiveByGoalCalendarListView,
     ObjectiveByTypeListView,
     ObjectiveCompleteView,
+    ObjectiveCreateView,
     ObjectiveDetailView,
-    ObjectiveListCreateView,
 )
 
 
 urlpatterns = [
-    path('objectives/', ObjectiveListCreateView.as_view(), name='objective-list-create'),
+    path('objectives/', ObjectiveCreateView.as_view(), name='objective-create'),
     path('objectives/type/<str:objective_type>/', ObjectiveByTypeListView.as_view(), name='objective-by-type'),
     path(
         'objectives/goal-calendar/<uuid:goal_calendar_id>/',
