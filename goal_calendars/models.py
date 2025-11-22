@@ -16,6 +16,8 @@ class GoalCalendar(models.Model):
     )
     start_date = models.DateField()
     active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'{self.num_weeks}-week calendar for {self.user.username}'

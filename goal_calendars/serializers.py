@@ -10,8 +10,18 @@ class GoalCalendarSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GoalCalendar
-        fields = ('id', 'user', 'title', 'num_weeks', 'start_date', 'end_date', 'active')
-        read_only_fields = ('id', 'user', 'end_date')
+        fields = (
+            'id',
+            'user',
+            'title',
+            'num_weeks',
+            'start_date',
+            'end_date',
+            'active',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = ('id', 'user', 'end_date', 'created_at', 'updated_at')
 
     def get_end_date(self, obj):
         return obj.get_end_date()
