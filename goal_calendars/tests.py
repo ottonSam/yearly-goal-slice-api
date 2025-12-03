@@ -1,13 +1,13 @@
 from datetime import timedelta
 
-from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 
-@override_settings(DATABASES={'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}})
 class WeeklyActivityFlowTests(APITestCase):
+    maxDiff = None
+
     def setUp(self):
         self.register_user()
         self.authenticate()
@@ -74,3 +74,146 @@ class WeeklyActivityFlowTests(APITestCase):
         self.assertIn("progress", report_resp.data)
         self.assertTrue(report_resp.data["progress"])
         self.assertGreaterEqual(report_resp.data["general_progress"], 0)
+
+    def test_weekly_activity_list_requires_week_number(self):
+        resp = self.client.get(f"/api/v1/goal-calendars/{self.calendar_id}/activities/")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("week_number", resp.data)
+
+    def test_weekly_activity_list_filters_by_week(self):
+        self.create_activity(metric_type="FREQUENCY", week_number=1, title="Week1", target_frequency=2)
+        self.create_activity(metric_type="FREQUENCY", week_number=2, title="Week2", target_frequency=2)
+        resp = self.client.get(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/", {"week_number": 1}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 1)
+        self.assertEqual(resp.data[0]["title"], "Week1")
+
+    def test_frequency_progress_rejects_wrong_metric(self):
+        qty_activity = self.create_activity(
+            metric_type="QUANTITY", week_number=1, title="Count things", target_quantity=5
+        )
+        resp = self.client.post(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{qty_activity}/progress/frequency/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_quantity_progress_success_and_validation(self):
+        qty_activity = self.create_activity(
+            metric_type="QUANTITY", week_number=1, title="Count commits", target_quantity=10
+        )
+        resp = self.client.post(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{qty_activity}/progress/quantity/",
+            {"amount": 3},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["quantity_progress"], 3)
+
+        invalid_resp = self.client.post(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{qty_activity}/progress/quantity/",
+            {"amount": -1},
+            format="json",
+        )
+        self.assertEqual(invalid_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("amount", invalid_resp.data)
+
+    def test_specific_days_progress_success_and_duplicate_check(self):
+        specific_activity = self.create_activity(
+            metric_type="SPECIFIC_DAYS",
+            week_number=1,
+            title="Yoga days",
+            specific_days=["monday", "wednesday"],
+        )
+        first = self.client.post(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{specific_activity}/progress/specific-days/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertIn("monday", first.data["completed_days"])
+
+        duplicate = self.client.post(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{specific_activity}/progress/specific-days/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("day", duplicate.data)
+
+        not_configured = self.client.post(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{specific_activity}/progress/specific-days/",
+            {"day": "friday"},
+            format="json",
+        )
+        self.assertEqual(not_configured.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("day", not_configured.data)
+
+    def test_weekly_report_requires_valid_week_number(self):
+        missing = self.client.get(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/report/",
+        )
+        self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+        invalid = self.client.get(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/report/", {"week_number": "abc"}
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cannot_access_other_users_calendar(self):
+        other_calendar = self.create_calendar_for_other_user()
+        resp = self.client.get(
+            f"/api/v1/goal-calendars/{other_calendar}/activities/",
+            {"week_number": 1},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    # Helpers
+    def create_activity(self, metric_type, week_number, title, **extra):
+        payload = {
+            "title": title,
+            "week_number": week_number,
+            "metric_type": metric_type,
+            "target_frequency": None,
+            "target_quantity": None,
+            "specific_days": [],
+            **extra,
+        }
+        resp = self.client.post(
+            f"/api/v1/goal-calendars/{self.calendar_id}/activities/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        return resp.data["id"]
+
+    def create_calendar_for_other_user(self):
+        # remove current auth to register and login as another user
+        self.client.credentials()
+        other_payload = {
+            "username": "charlie",
+            "email": "charlie@example.com",
+            "password": "StrongPass123!",
+            "first_name": "Charlie",
+            "last_name": "Tester",
+        }
+        self.client.post("/api/v1/auth/register/", other_payload, format="json")
+        login_resp = self.client.post(
+            "/api/v1/auth/login/",
+            {"username": "charlie", "password": "StrongPass123!"},
+            format="json",
+        )
+        token = login_resp.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        start_date = timezone.localdate() + timedelta(days=2)
+        resp = self.client.post(
+            "/api/v1/goal-calendars/",
+            {"title": "Other calendar", "num_weeks": 2, "start_date": start_date},
+            format="json",
+        )
+        calendar_id = resp.data["id"]
+        # restore original user auth
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
+        return calendar_id

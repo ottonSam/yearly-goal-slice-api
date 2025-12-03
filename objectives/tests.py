@@ -1,12 +1,10 @@
 from datetime import timedelta
 
-from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 
-@override_settings(DATABASES={'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}})
 class ObjectiveFlowTests(APITestCase):
     def setUp(self):
         self.register_user()
