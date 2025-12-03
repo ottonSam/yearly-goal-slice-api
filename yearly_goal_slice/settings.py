@@ -13,21 +13,32 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta
+from distutils.util import strtobool
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env (simple parser to avoid extra deps)
+ENV_PATH = BASE_DIR / ".env"
+if ENV_PATH.exists():
+    for line in ENV_PATH.read_text().splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        key, sep, value = stripped.partition("=")
+        if sep:
+            os.environ.setdefault(key, value)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-31=j8!z14y)onx1ke7a0kpr6!+h8-(q8)@$_2e*jnkted1&l*j'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-31=j8!z14y)onx1ke7a0kpr6!+h8-(q8)@$_2e*jnkted1&l*j')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(strtobool(os.environ.get('DJANGO_DEBUG', 'False')))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if host]
 
 
 # Application definition
@@ -80,10 +91,19 @@ WSGI_APPLICATION = 'yearly_goal_slice.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DB_ENGINE = os.environ.get('DJANGO_DB_ENGINE', 'django.db.backends.sqlite3')
+DB_NAME = (
+    (BASE_DIR / os.environ['DJANGO_DB_NAME'])
+    if 'DJANGO_DB_NAME' in os.environ and not os.path.isabs(os.environ['DJANGO_DB_NAME'])
+    else os.environ.get('DJANGO_DB_NAME', BASE_DIR / 'db.sqlite3')
+)
+DB_TEST_NAME = os.environ.get('DJANGO_DB_TEST_NAME', ':memory:' if DB_ENGINE.endswith('sqlite3') else None)
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': DB_ENGINE,
+        'NAME': DB_NAME,
+        'TEST': {'NAME': DB_TEST_NAME} if DB_TEST_NAME else {},
     }
 }
 
