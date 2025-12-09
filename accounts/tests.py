@@ -82,6 +82,18 @@ class AccountUpdateTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('new_password', response.data)
 
+    def test_change_password_accepts_exactly_eight_characters(self):
+        payload = {
+            'current_password': 'Oldpass123',
+            'new_password': 'Aa1!aaaa',
+        }
+
+        response = self.client.post(reverse('auth-change-password'), data=payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(payload['new_password']))
+
 
 class AccountAuthFlowTests(APITestCase):
     def setUp(self):

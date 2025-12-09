@@ -3,13 +3,13 @@ from django.core.exceptions import ValidationError
 
 class StrongPasswordValidator:
     """
-    Enforces passwords with length > 8 including upper, lower, number and special char.
+    Enforces passwords with length >= 8 including upper, lower, number and special char.
     """
 
     def validate(self, password, user=None):
         errors = []
-        if len(password) <= 8:
-            errors.append("Password must be longer than 8 characters.")
+        if len(password) < 8:
+            errors.append("Password must be at least 8 characters.")
         if not any(char.islower() for char in password):
             errors.append("Password must include at least one lowercase letter.")
         if not any(char.isupper() for char in password):
@@ -24,6 +24,6 @@ class StrongPasswordValidator:
 
     def get_help_text(self):
         return (
-            "Password must be longer than 8 characters and include uppercase, lowercase, "
+            "Password must be at least 8 characters and include uppercase, lowercase, "
             "number and special character."
         )
