@@ -152,16 +152,15 @@ class GoalCalendarListSerializer(GoalCalendarBaseSerializer):
 
 
 class WeeklyActivitySerializer(serializers.ModelSerializer):
-    goal_calendar = serializers.PrimaryKeyRelatedField(read_only=True)
+    week = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = WeeklyActivity
         fields = (
             'id',
-            'goal_calendar',
             'title',
             'description',
-            'week_number',
+            'week',
             'metric_type',
             'target_frequency',
             'target_quantity',
@@ -175,7 +174,7 @@ class WeeklyActivitySerializer(serializers.ModelSerializer):
         )
         read_only_fields = (
             'id',
-            'goal_calendar',
+            'week',
             'frequency_progress',
             'quantity_progress',
             'completed_days',
@@ -184,32 +183,28 @@ class WeeklyActivitySerializer(serializers.ModelSerializer):
             'updated_at',
         )
 
-    def validate_goal_calendar(self, value):
-        request = self.context.get('request')
-        if request and value and value.user != request.user:
-            raise serializers.ValidationError("You cannot use calendars that belong to another user.")
-        if value and not value.active:
-            raise serializers.ValidationError("Goal calendar must be active.")
-        return value
-
     def validate(self, attrs):
-        goal_calendar = attrs.get('goal_calendar') or self.context.get('goal_calendar')
-        week_number = attrs.get('week_number')
+        week = self.context.get('week')
         metric_type = attrs.get('metric_type')
+        title = attrs.get('title')
         target_frequency = attrs.get('target_frequency') if 'target_frequency' in attrs else None
         target_quantity = attrs.get('target_quantity') if 'target_quantity' in attrs else None
         specific_days = attrs.get('specific_days') if 'specific_days' in attrs else None
 
         request = self.context.get('request')
-        if goal_calendar and request and goal_calendar.user != request.user:
-            raise serializers.ValidationError({"goal_calendar": "You cannot use calendars that belong to another user."})
+        if week and request and week.goal_calendar.user != request.user:
+            raise serializers.ValidationError({"week": "You cannot use weeks that belong to another user."})
+        if week and not week.active:
+            raise serializers.ValidationError({"week": "Week must be active."})
+        if week and not week.goal_calendar.active:
+            raise serializers.ValidationError({"week": "Goal calendar must be active."})
 
         if self.instance:
-            if 'goal_calendar' in attrs and attrs['goal_calendar'] != self.instance.goal_calendar:
-                raise serializers.ValidationError({"goal_calendar": "You cannot change the calendar of an activity."})
-            goal_calendar = goal_calendar or self.instance.goal_calendar
-            week_number = week_number or self.instance.week_number
+            if 'week' in attrs and attrs['week'] != self.instance.week:
+                raise serializers.ValidationError({"week": "You cannot change the week of an activity."})
+            week = week or self.instance.week
             metric_type = metric_type or self.instance.metric_type
+            title = title or self.instance.title
             if 'target_frequency' not in attrs:
                 target_frequency = self.instance.target_frequency
             if 'target_quantity' not in attrs:
@@ -217,11 +212,12 @@ class WeeklyActivitySerializer(serializers.ModelSerializer):
             if 'specific_days' not in attrs:
                 specific_days = self.instance.specific_days
 
-        if goal_calendar and week_number:
-            if week_number < 1 or week_number > goal_calendar.num_weeks:
-                raise serializers.ValidationError(
-                    {"week_number": f"Week number must be between 1 and {goal_calendar.num_weeks} for this calendar."}
-                )
+        if week and title:
+            existing = WeeklyActivity.objects.filter(week=week, title=title)
+            if self.instance:
+                existing = existing.exclude(id=self.instance.id)
+            if existing.exists():
+                raise serializers.ValidationError({"title": "An activity with this title already exists for this week."})
 
         if metric_type == WeeklyActivity.MetricType.FREQUENCY:
             if target_frequency in (None, ''):

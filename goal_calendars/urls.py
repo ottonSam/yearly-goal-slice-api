@@ -28,32 +28,32 @@ urlpatterns = [
         name='weekly-activity-metric-type-list',
     ),
     path(
-        'goal-calendars/<uuid:goal_calendar_id>/activities/',
+        'goal-calendars/weeks/<uuid:week_id>/activities/',
         WeeklyActivityListCreateView.as_view(),
         name='weekly-activity-list-create',
     ),
     path(
-        'goal-calendars/<uuid:goal_calendar_id>/activities/<uuid:pk>/',
+        'goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/',
         WeeklyActivityDetailView.as_view(),
         name='weekly-activity-detail',
     ),
     path(
-        'goal-calendars/<uuid:goal_calendar_id>/activities/<uuid:pk>/progress/frequency/',
+        'goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/progress/frequency/',
         WeeklyActivityFrequencyProgressView.as_view(),
         name='weekly-activity-progress-frequency',
     ),
     path(
-        'goal-calendars/<uuid:goal_calendar_id>/activities/<uuid:pk>/progress/quantity/',
+        'goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/progress/quantity/',
         WeeklyActivityQuantityProgressView.as_view(),
         name='weekly-activity-progress-quantity',
     ),
     path(
-        'goal-calendars/<uuid:goal_calendar_id>/activities/<uuid:pk>/progress/specific-days/',
+        'goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/progress/specific-days/',
         WeeklyActivitySpecificDaysProgressView.as_view(),
         name='weekly-activity-progress-specific-days',
     ),
     path(
-        'goal-calendars/<uuid:goal_calendar_id>/activities/report/',
+        'goal-calendars/weeks/<uuid:week_id>/activities/report/',
         WeeklyActivityWeekReportView.as_view(),
         name='weekly-activity-week-report',
     ),

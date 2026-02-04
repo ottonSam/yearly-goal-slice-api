@@ -42,20 +42,19 @@ Rotas principais (prefixo `/api/v1/`)
   - `GET /goal-calendars/<goal_calendar_id>/weeks/` lista semanas ativas do calendario.
 - Weekly activities (metas semanais dentro de um calendario)
   - `GET /goal-calendars/activities/metric-types/` lista os tipos de metricas disponiveis.
-  - `GET/POST /goal-calendars/<goal_calendar_id>/activities/?week_number=N` lista/cria atividades da semana N.
-  - `GET/PUT/PATCH /goal-calendars/<goal_calendar_id>/activities/<uuid>/` consulta/edita atividade.
-  - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/frequency/` incrementa progresso de frequencia (`day`).
-  - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/quantity/` soma progresso de quantidade (`amount`).
-  - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/specific-days/` marca dia concluido para metricas de dias especificos (`day`).
-  - `GET /goal-calendars/<goal_calendar_id>/activities/report/?week_number=N` relatorio percentual por atividade e media geral da semana.
+  - `GET/POST /goal-calendars/weeks/<week_id>/activities/` lista/cria atividades da semana.
+  - `GET/PUT/PATCH /goal-calendars/weeks/<week_id>/activities/<uuid>/` consulta/edita atividade.
+  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/frequency/` incrementa progresso de frequencia (`day`).
+  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/quantity/` soma progresso de quantidade (`amount`).
+  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/specific-days/` marca dia concluido para metricas de dias especificos (`day`).
+  - `GET /goal-calendars/weeks/<week_id>/activities/report/` relatorio percentual por atividade e media geral da semana.
   - Parametros
-    - `goal_calendar_id` e `uuid` sao UUIDs.
-    - `week_number` indica a semana do calendario (1..N).
+    - `goal_calendar_id`, `week_id` e `uuid` sao UUIDs.
   - Bodies (resumo)
-    - Criar atividade: inclui `title`, `metric_type` e o alvo correspondente (`frequency_goal`, `quantity_goal` ou `specific_days_goal`).
-    - Progresso de frequencia: body com `day` (YYYY-MM-DD).
+    - Criar atividade: inclui `title`, `metric_type` e o alvo correspondente (`target_frequency`, `target_quantity` ou `specific_days`).
+    - Progresso de frequencia: body com `day` (weekday em ingles, ex.: `monday`).
     - Progresso de quantidade: body com `amount` (numero).
-    - Progresso de dias especificos: body com `day` (YYYY-MM-DD).
+    - Progresso de dias especificos: body com `day` (weekday em ingles, ex.: `monday`).
 - Objectives
   - `GET /objectives/types/` lista os tipos disponiveis.
   - `POST /objectives/` cria objetivo para o usuario logado.
