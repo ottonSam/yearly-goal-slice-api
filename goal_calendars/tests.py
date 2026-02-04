@@ -90,6 +90,13 @@ class WeeklyActivityFlowTests(APITestCase):
         self.assertEqual(len(resp.data), 1)
         self.assertEqual(resp.data[0]["title"], "Week1")
 
+    def test_list_activity_metric_types(self):
+        resp = self.client.get("/api/v1/goal-calendars/activities/metric-types/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn("metric_types", resp.data)
+        values = {item["value"] for item in resp.data["metric_types"]}
+        self.assertTrue({"FREQUENCY", "QUANTITY", "SPECIFIC_DAYS"}.issubset(values))
+
     def test_frequency_progress_rejects_wrong_metric(self):
         qty_activity = self.create_activity(
             metric_type="QUANTITY", week_number=1, title="Count things", target_quantity=5

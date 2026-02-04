@@ -60,3 +60,10 @@ class ObjectiveFlowTests(APITestCase):
         complete_resp = self.client.post(f"/api/v1/objectives/{objective_id}/complete/")
         self.assertEqual(complete_resp.status_code, status.HTTP_200_OK)
         self.assertTrue(complete_resp.data["is_complete"])
+
+    def test_list_objective_types(self):
+        resp = self.client.get("/api/v1/objectives/types/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn("objective_types", resp.data)
+        values = {item["value"] for item in resp.data["objective_types"]}
+        self.assertTrue({"LONG_TERM", "MEDIUM_TERM", "GOAL_CALENDAR"}.issubset(values))

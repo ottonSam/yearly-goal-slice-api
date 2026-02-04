@@ -5,8 +5,30 @@ from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from .models import GoalCalendar, WeeklyActivity
-from .serializers import ALLOWED_WEEK_DAYS, GoalCalendarSerializer, WeeklyActivitySerializer
+from .models import GoalCalendar, GoalCalendarWeek, WeeklyActivity
+from .serializers import (
+    ALLOWED_WEEK_DAYS,
+    GoalCalendarListSerializer,
+    GoalCalendarSerializer,
+    GoalCalendarWeekSerializer,
+    WeeklyActivitySerializer,
+)
+
+
+class WeeklyActivityMetricTypeListView(generics.GenericAPIView):
+    """
+    List available weekly activity metric types.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(operation_summary="List activity metric types", tags=["Weekly Activities"], request_body=None)
+    def get(self, request, *args, **kwargs):
+        metric_types = [
+            {"value": value, "label": label}
+            for value, label in WeeklyActivity.MetricType.choices
+        ]
+        return Response({"metric_types": metric_types}, status=status.HTTP_200_OK)
 
 
 class GoalCalendarListCreateView(generics.ListCreateAPIView):
@@ -16,6 +38,11 @@ class GoalCalendarListCreateView(generics.ListCreateAPIView):
 
     serializer_class = GoalCalendarSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return GoalCalendarListSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self):
         return GoalCalendar.objects.filter(user=self.request.user, active=True)
@@ -47,6 +74,27 @@ class GoalCalendarDetailView(generics.RetrieveUpdateDestroyAPIView):
             raise PermissionDenied("You cannot delete calendars that belong to other users.")
         instance.active = False
         instance.save(update_fields=["active"])
+
+
+class GoalCalendarWeekListView(generics.ListAPIView):
+    """
+    List active weeks for a specific goal calendar.
+    """
+
+    serializer_class = GoalCalendarWeekSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_calendar(self):
+        return get_object_or_404(
+            GoalCalendar,
+            id=self.kwargs['goal_calendar_id'],
+            user=self.request.user,
+            active=True,
+        )
+
+    def get_queryset(self):
+        calendar = self.get_calendar()
+        return GoalCalendarWeek.objects.filter(goal_calendar=calendar, active=True).order_by('week_num')
 
 
 class WeeklyActivityBaseView:

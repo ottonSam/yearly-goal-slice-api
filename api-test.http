@@ -1,0 +1,166 @@
+@baseUrl = http://localhost:8000/api/v1
+@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MDI2NTI4OCwiaWF0IjoxNzcwMTc4ODg4LCJqdGkiOiI3ZGRhOTlmYjE0ZmU0NTBiYmZkNjA5MzhlNjk5MzA4ZCIsInVzZXJfaWQiOiI1Y2I5YjllMy1mMzQ0LTQ3YzctODRkYi01ZTYwZTA5NTRiNjUifQ.7gWXNybmCPsLk8dSlA4P7WUC6cXiHsxYETV9Z7PbjSQ
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwMjM0MDE4LCJpYXQiOjE3NzAyMzMxMTgsImp0aSI6IjMyN2U1MmNkMjY3OTRjZDc4NTFkZTA1MjliZWJmYTVmIiwidXNlcl9pZCI6IjVjYjliOWUzLWYzNDQtNDdjNy04NGRiLTVlNjBlMDk1NGI2NSJ9.zD38x3tOujBxnYXeRV5WcMMYaPiZCI3_Dm8RFjeSh90
+@goalCalendarId = 93658d10-b1ba-42fd-b97b-64eaf0bff2bf
+@objectiveId = 4f2c127a-4745-46d2-a8e1-7cb0ba1861d3
+
+##### Authentication and User Management
+### Register
+POST {{baseUrl}}/auth/register/
+Content-Type: application/json
+
+{
+  "username": "exampleuser",
+  "email": "exampleuser@email.com",
+  "password": "Teste123!@",
+  "first_name": "example",
+  "last_name": "user"
+}
+
+### Login
+POST {{baseUrl}}/auth/login/
+Content-Type: application/json
+
+{
+  "username": "exampleuser",
+  "password": "Teste123!@"
+}
+
+### Refresh token (set {{refresh}} from login response)
+POST {{baseUrl}}/auth/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "{{refresh}}"
+}
+
+### Me (set {{access}} from login response)
+GET {{baseUrl}}/auth/me/
+Authorization: Bearer {{access}}
+
+### Update profile
+PUT {{baseUrl}}/auth/update-profile/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "first_name": "example_updated",
+  "last_name": "user_updated",
+  "email": "exampleupdateduser@email.com"
+}
+
+### Change password
+POST {{baseUrl}}/auth/change-password/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "current_password": "Teste123!@",
+  "new_password": "Teste123!@"
+}
+
+
+##### Objectives
+### Objective types
+GET {{baseUrl}}/objectives/types/
+Authorization: Bearer {{access}}
+
+### Create objective (goal calendar)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "GOAL_CALENDAR",
+  "goal_calendar": "{{goalCalendarId}}",
+  "title": "Sprint week 1",
+  "description": "Entregar backlog da semana"
+}
+
+### Create objective (LONG_TERM)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "LONG_TERM",
+  "title": "Long term objective",
+  "description": "This is a long term objective"
+}
+
+### Create objective (MEDIUM_TERM)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "MEDIUM_TERM",
+  "title": "Medium term objective",
+  "description": "This is a medium term objective "
+}
+
+### List objectives by type
+GET {{baseUrl}}/objectives/type/LONG_TERM/
+Authorization: Bearer {{access}}
+
+### List objectives by goal calendar
+GET {{baseUrl}}/objectives/goal-calendar/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+### Objective detail (set {{objectiveId}} from create response)
+GET {{baseUrl}}/objectives/{{objectiveId}}/
+Authorization: Bearer {{access}}
+
+### Complete objective
+POST {{baseUrl}}/objectives/{{objectiveId}}/complete/
+Authorization: Bearer {{access}}
+
+
+##### Goal Calendars
+### Create goal calendar
+POST {{baseUrl}}/goal-calendars/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Roadmap",
+  "num_weeks": 6,
+  "start_date": "2026-02-10"
+}
+
+### List goal calendars
+GET {{baseUrl}}/goal-calendars/
+Authorization: Bearer {{access}}
+
+### Goal calendar detail (set {{goalCalendarId}} from create response)
+GET {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+### Update goal calendar
+PUT {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Roadmap updated",
+  "num_weeks": 6,
+  "start_date": "2026-02-04"
+}
+
+### Delete goal calendar
+DELETE {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+
+##### Goal Calendar Weeks
+### List active weeks for a goal calendar
+GET {{baseUrl}}/goal-calendars/{{goalCalendarId}}/weeks/
+Authorization: Bearer {{access}}
+
+### Activity metric types
+GET {{baseUrl}}/goal-calendars/activities/metric-types/
+Authorization: Bearer {{access}}
+
+
+
+### Continuar daqui

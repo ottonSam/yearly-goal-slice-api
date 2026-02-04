@@ -3,11 +3,13 @@ from django.urls import path
 from .views import (
     GoalCalendarDetailView,
     GoalCalendarListCreateView,
+    GoalCalendarWeekListView,
     WeeklyActivityDetailView,
     WeeklyActivityListCreateView,
     WeeklyActivityFrequencyProgressView,
     WeeklyActivityQuantityProgressView,
     WeeklyActivitySpecificDaysProgressView,
+    WeeklyActivityMetricTypeListView,
     WeeklyActivityWeekReportView,
 )
 
@@ -15,6 +17,16 @@ from .views import (
 urlpatterns = [
     path('goal-calendars/', GoalCalendarListCreateView.as_view(), name='goal-calendar-list-create'),
     path('goal-calendars/<uuid:pk>/', GoalCalendarDetailView.as_view(), name='goal-calendar-detail'),
+    path(
+        'goal-calendars/<uuid:goal_calendar_id>/weeks/',
+        GoalCalendarWeekListView.as_view(),
+        name='goal-calendar-week-list',
+    ),
+    path(
+        'goal-calendars/activities/metric-types/',
+        WeeklyActivityMetricTypeListView.as_view(),
+        name='weekly-activity-metric-type-list',
+    ),
     path(
         'goal-calendars/<uuid:goal_calendar_id>/activities/',
         WeeklyActivityListCreateView.as_view(),

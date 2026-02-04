@@ -24,7 +24,7 @@ Principais dependencias
 Modulos e responsabilidades
 ---------------------------
 - accounts: modelo de usuario com UUID como chave primaria; endpoints de registro, login/refresh via JWT e consulta do usuario autenticado.
-- goal_calendars: calendarios semanais de metas por usuario; calcula data final; soft-delete via `active`; inclui weekly activities com tres metricas (frequencia, quantidade ou dias especificos), progresso por metrica e relatorio semanal agregado.
+- goal_calendars: calendarios semanais de metas por usuario; calcula data final; soft-delete via `active`; inclui semanas geradas automaticamente (GoalCalendarWeek) e weekly activities com tres metricas (frequencia, quantidade ou dias especificos), progresso por metrica e relatorio semanal agregado.
 - objectives: objetivos de longo/medio prazo ou atrelados a um calendario; validacoes para evitar duplicidades ativas e garantir vinculo correto com calendarios do proprio usuario; soft-delete e marca de conclusao.
 
 Rotas principais (prefixo `/api/v1/`)
@@ -39,14 +39,25 @@ Rotas principais (prefixo `/api/v1/`)
 - Goal calendars
   - `GET/POST /goal-calendars/` lista/cria calendarios do usuario logado.
   - `GET/PUT/DELETE /goal-calendars/<uuid>/` recupera, atualiza ou inativa (soft-delete) um calendario do usuario.
+  - `GET /goal-calendars/<goal_calendar_id>/weeks/` lista semanas ativas do calendario.
 - Weekly activities (metas semanais dentro de um calendario)
+  - `GET /goal-calendars/activities/metric-types/` lista os tipos de metricas disponiveis.
   - `GET/POST /goal-calendars/<goal_calendar_id>/activities/?week_number=N` lista/cria atividades da semana N.
   - `GET/PUT/PATCH /goal-calendars/<goal_calendar_id>/activities/<uuid>/` consulta/edita atividade.
   - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/frequency/` incrementa progresso de frequencia (`day`).
   - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/quantity/` soma progresso de quantidade (`amount`).
   - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/specific-days/` marca dia concluido para metricas de dias especificos (`day`).
   - `GET /goal-calendars/<goal_calendar_id>/activities/report/?week_number=N` relatorio percentual por atividade e media geral da semana.
+  - Parametros
+    - `goal_calendar_id` e `uuid` sao UUIDs.
+    - `week_number` indica a semana do calendario (1..N).
+  - Bodies (resumo)
+    - Criar atividade: inclui `title`, `metric_type` e o alvo correspondente (`frequency_goal`, `quantity_goal` ou `specific_days_goal`).
+    - Progresso de frequencia: body com `day` (YYYY-MM-DD).
+    - Progresso de quantidade: body com `amount` (numero).
+    - Progresso de dias especificos: body com `day` (YYYY-MM-DD).
 - Objectives
+  - `GET /objectives/types/` lista os tipos disponiveis.
   - `POST /objectives/` cria objetivo para o usuario logado.
   - `GET /objectives/type/<objective_type>/` lista objetivos ativos filtrados por tipo (`LONG_TERM`, `MEDIUM_TERM`, `GOAL_CALENDAR`).
   - `GET /objectives/goal-calendar/<uuid>/` lista objetivos vinculados a um calendario ativo do usuario.
