@@ -7,8 +7,8 @@
 - Local SQLite DB lives in `db.sqlite3` (created by migrations); docs exposed at `/swagger/` and `/redoc/` once running.
 
 ## Setup, Build & Run
-- Create env: `python3 -m venv .venv && source .venv/bin/activate`.
-- Install deps: `pip install -r requeriments.txt`.
+- Create env: `uv venv .venv && source .venv/bin/activate`.
+- Install deps: `uv sync`.
 - Apply schema: `source .venv/bin/activate && python manage.py migrate`; create admin (optional): `source .venv/bin/activate && python manage.py createsuperuser`.
 - Start API: `source .venv/bin/activate && python manage.py runserver` (dev server on `http://localhost:8000`).
 

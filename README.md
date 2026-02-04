@@ -5,9 +5,10 @@ API em Django para cadastro de usuarios, calendarios de metas semanais e objetiv
 
 Como rodar localmente
 ---------------------
-- Crie o ambiente virtual: `python3 -m venv .venv`
+- Instale o `uv` (via `pip`): `pip install uv`
+- Crie o ambiente virtual: `uv venv .venv`
 - Ative: `source .venv/bin/activate`
-- Instale dependencias: `pip install -r requeriments.txt`
+- Instale dependencias: `uv sync`
 - Aplique migracoes (cria o banco SQLite em `db.sqlite3`): `python manage.py migrate`
 - Crie um superuser (opcional, para admin): `python manage.py createsuperuser`
 - Suba o servidor: `python manage.py runserver`
@@ -33,6 +34,8 @@ Rotas principais (prefixo `/api/v1/`)
   - `POST /auth/login/` retorna `access` e `refresh`.
   - `POST /auth/refresh/` renova token.
   - `GET /auth/me/` dados do usuario autenticado.
+  - `PUT /auth/update-profile/` atualiza perfil do usuario autenticado.
+  - `PUT /auth/change-password/` altera senha do usuario autenticado.
 - Goal calendars
   - `GET/POST /goal-calendars/` lista/cria calendarios do usuario logado.
   - `GET/PUT/DELETE /goal-calendars/<uuid>/` recupera, atualiza ou inativa (soft-delete) um calendario do usuario.

@@ -1,0 +1,13 @@
+[project]
+name = "yearly-goal-slice-api"
+version = "0.1.0"
+description = "API em Django para metas anuais com calendarios semanais e objetivos."
+requires-python = ">=3.10"
+dependencies = [
+  "asgiref==3.10.0",
+  "Django==4.2.16",
+  "djangorestframework==3.16.1",
+  "djangorestframework-simplejwt==5.4.0",
+  "drf-yasg==1.21.7",
+  "sqlparse==0.5.3",
+]
