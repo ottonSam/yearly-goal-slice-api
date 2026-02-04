@@ -5,8 +5,30 @@ from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from .models import GoalCalendar, WeeklyActivity
-from .serializers import ALLOWED_WEEK_DAYS, GoalCalendarSerializer, WeeklyActivitySerializer
+from .models import GoalCalendar, GoalCalendarWeek, WeeklyActivity
+from .serializers import (
+    ALLOWED_WEEK_DAYS,
+    GoalCalendarListSerializer,
+    GoalCalendarSerializer,
+    GoalCalendarWeekSerializer,
+    WeeklyActivitySerializer,
+)
+
+
+class WeeklyActivityMetricTypeListView(generics.GenericAPIView):
+    """
+    List available weekly activity metric types.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(operation_summary="List activity metric types", tags=["Weekly Activities"], request_body=None)
+    def get(self, request, *args, **kwargs):
+        metric_types = [
+            {"value": value, "label": label}
+            for value, label in WeeklyActivity.MetricType.choices
+        ]
+        return Response({"metric_types": metric_types}, status=status.HTTP_200_OK)
 
 
 class GoalCalendarListCreateView(generics.ListCreateAPIView):
@@ -16,6 +38,11 @@ class GoalCalendarListCreateView(generics.ListCreateAPIView):
 
     serializer_class = GoalCalendarSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return GoalCalendarListSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self):
         return GoalCalendar.objects.filter(user=self.request.user, active=True)
@@ -49,8 +76,12 @@ class GoalCalendarDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.save(update_fields=["active"])
 
 
-class WeeklyActivityBaseView:
-    serializer_class = WeeklyActivitySerializer
+class GoalCalendarWeekListView(generics.ListAPIView):
+    """
+    List active weeks for a specific goal calendar.
+    """
+
+    serializer_class = GoalCalendarWeekSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_calendar(self):
@@ -63,39 +94,40 @@ class WeeklyActivityBaseView:
 
     def get_queryset(self):
         calendar = self.get_calendar()
-        queryset = WeeklyActivity.objects.filter(goal_calendar=calendar, active=True)
-        week_number = self.request.query_params.get('week_number')
-        if week_number is not None:
-            try:
-                week_number_value = int(week_number)
-            except ValueError:
-                raise ValidationError({"week_number": "Week number must be an integer."})
-            queryset = queryset.filter(week_number=week_number_value)
-        return queryset
+        return GoalCalendarWeek.objects.filter(goal_calendar=calendar, active=True).order_by('week_num')
+
+
+class WeeklyActivityBaseView:
+    serializer_class = WeeklyActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_week(self):
+        return get_object_or_404(
+            GoalCalendarWeek,
+            id=self.kwargs['week_id'],
+            goal_calendar__user=self.request.user,
+            goal_calendar__active=True,
+            active=True,
+        )
+
+    def get_queryset(self):
+        week = self.get_week()
+        return WeeklyActivity.objects.filter(week=week, active=True)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['goal_calendar'] = self.get_calendar()
+        context['week'] = self.get_week()
         return context
 
 
 class WeeklyActivityListCreateView(WeeklyActivityBaseView, generics.ListCreateAPIView):
     """
-    List or create weekly activities for a specific goal calendar.
+    List or create weekly activities for a specific week.
     """
 
     @swagger_auto_schema(
         operation_summary="List weekly activities",
         tags=["Weekly Activities"],
-        manual_parameters=[
-            openapi.Parameter(
-                name='week_number',
-                in_=openapi.IN_QUERY,
-                type=openapi.TYPE_INTEGER,
-                required=True,
-                description="Número da semana dentro do calendário (1..num_weeks)",
-            ),
-        ],
     )
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -109,13 +141,7 @@ class WeeklyActivityListCreateView(WeeklyActivityBaseView, generics.ListCreateAP
         return super().post(*args, **kwargs)
 
     def perform_create(self, serializer):
-        serializer.save(goal_calendar=self.get_calendar())
-
-    def get_queryset(self):
-        week_number = self.request.query_params.get('week_number')
-        if week_number is None:
-            raise ValidationError({"week_number": "This query parameter is required to list activities for a week."})
-        return super().get_queryset()
+        serializer.save(week=self.get_week())
 
 
 class WeeklyActivityDetailView(WeeklyActivityBaseView, generics.RetrieveUpdateAPIView):
@@ -275,15 +301,6 @@ class WeeklyActivityWeekReportView(WeeklyActivityBaseView, generics.GenericAPIVi
     @swagger_auto_schema(
         operation_summary="Weekly performance report",
         tags=["Weekly Activities"],
-        manual_parameters=[
-            openapi.Parameter(
-                name='week_number',
-                in_=openapi.IN_QUERY,
-                type=openapi.TYPE_INTEGER,
-                required=True,
-                description="Número da semana dentro do calendário (1..num_weeks)",
-            ),
-        ],
         responses={200: openapi.Response(description="Weekly report")},
     )
     def get(self, request, *args, **kwargs):
@@ -314,14 +331,3 @@ class WeeklyActivityWeekReportView(WeeklyActivityBaseView, generics.GenericAPIVi
         general_progress = round(sum(item["progress"] for item in report_items) / len(report_items), 2) if report_items else 0
         data = {"progress": report_items, "general_progress": general_progress}
         return Response(data, status=status.HTTP_200_OK)
-
-    def get_queryset(self):
-        week_number = self.request.query_params.get('week_number')
-        if week_number is None:
-            raise ValidationError({"week_number": "This query parameter is required to generate the report."})
-        try:
-            week_number_value = int(week_number)
-        except ValueError:
-            raise ValidationError({"week_number": "Week number must be an integer."})
-        calendar = self.get_calendar()
-        return WeeklyActivity.objects.filter(goal_calendar=calendar, active=True, week_number=week_number_value)

@@ -5,9 +5,10 @@ API em Django para cadastro de usuarios, calendarios de metas semanais e objetiv
 
 Como rodar localmente
 ---------------------
-- Crie o ambiente virtual: `python3 -m venv .venv`
+- Instale o `uv` (via `pip`): `pip install uv`
+- Crie o ambiente virtual: `uv venv .venv`
 - Ative: `source .venv/bin/activate`
-- Instale dependencias: `pip install -r requeriments.txt`
+- Instale dependencias: `uv sync`
 - Aplique migracoes (cria o banco SQLite em `db.sqlite3`): `python manage.py migrate`
 - Crie um superuser (opcional, para admin): `python manage.py createsuperuser`
 - Suba o servidor: `python manage.py runserver`
@@ -23,7 +24,7 @@ Principais dependencias
 Modulos e responsabilidades
 ---------------------------
 - accounts: modelo de usuario com UUID como chave primaria; endpoints de registro, login/refresh via JWT e consulta do usuario autenticado.
-- goal_calendars: calendarios semanais de metas por usuario; calcula data final; soft-delete via `active`; inclui weekly activities com tres metricas (frequencia, quantidade ou dias especificos), progresso por metrica e relatorio semanal agregado.
+- goal_calendars: calendarios semanais de metas por usuario; calcula data final; soft-delete via `active`; inclui semanas geradas automaticamente (GoalCalendarWeek) e weekly activities com tres metricas (frequencia, quantidade ou dias especificos), progresso por metrica e relatorio semanal agregado.
 - objectives: objetivos de longo/medio prazo ou atrelados a um calendario; validacoes para evitar duplicidades ativas e garantir vinculo correto com calendarios do proprio usuario; soft-delete e marca de conclusao.
 
 Rotas principais (prefixo `/api/v1/`)
@@ -33,17 +34,29 @@ Rotas principais (prefixo `/api/v1/`)
   - `POST /auth/login/` retorna `access` e `refresh`.
   - `POST /auth/refresh/` renova token.
   - `GET /auth/me/` dados do usuario autenticado.
+  - `PUT /auth/update-profile/` atualiza perfil do usuario autenticado.
+  - `PUT /auth/change-password/` altera senha do usuario autenticado.
 - Goal calendars
   - `GET/POST /goal-calendars/` lista/cria calendarios do usuario logado.
   - `GET/PUT/DELETE /goal-calendars/<uuid>/` recupera, atualiza ou inativa (soft-delete) um calendario do usuario.
+  - `GET /goal-calendars/<goal_calendar_id>/weeks/` lista semanas ativas do calendario.
 - Weekly activities (metas semanais dentro de um calendario)
-  - `GET/POST /goal-calendars/<goal_calendar_id>/activities/?week_number=N` lista/cria atividades da semana N.
-  - `GET/PUT/PATCH /goal-calendars/<goal_calendar_id>/activities/<uuid>/` consulta/edita atividade.
-  - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/frequency/` incrementa progresso de frequencia (`day`).
-  - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/quantity/` soma progresso de quantidade (`amount`).
-  - `POST /goal-calendars/<goal_calendar_id>/activities/<uuid>/progress/specific-days/` marca dia concluido para metricas de dias especificos (`day`).
-  - `GET /goal-calendars/<goal_calendar_id>/activities/report/?week_number=N` relatorio percentual por atividade e media geral da semana.
+  - `GET /goal-calendars/activities/metric-types/` lista os tipos de metricas disponiveis.
+  - `GET/POST /goal-calendars/weeks/<week_id>/activities/` lista/cria atividades da semana.
+  - `GET/PUT/PATCH /goal-calendars/weeks/<week_id>/activities/<uuid>/` consulta/edita atividade.
+  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/frequency/` incrementa progresso de frequencia (`day`).
+  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/quantity/` soma progresso de quantidade (`amount`).
+  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/specific-days/` marca dia concluido para metricas de dias especificos (`day`).
+  - `GET /goal-calendars/weeks/<week_id>/activities/report/` relatorio percentual por atividade e media geral da semana.
+  - Parametros
+    - `goal_calendar_id`, `week_id` e `uuid` sao UUIDs.
+  - Bodies (resumo)
+    - Criar atividade: inclui `title`, `metric_type` e o alvo correspondente (`target_frequency`, `target_quantity` ou `specific_days`).
+    - Progresso de frequencia: body com `day` (weekday em ingles, ex.: `monday`).
+    - Progresso de quantidade: body com `amount` (numero).
+    - Progresso de dias especificos: body com `day` (weekday em ingles, ex.: `monday`).
 - Objectives
+  - `GET /objectives/types/` lista os tipos disponiveis.
   - `POST /objectives/` cria objetivo para o usuario logado.
   - `GET /objectives/type/<objective_type>/` lista objetivos ativos filtrados por tipo (`LONG_TERM`, `MEDIUM_TERM`, `GOAL_CALENDAR`).
   - `GET /objectives/goal-calendar/<uuid>/` lista objetivos vinculados a um calendario ativo do usuario.

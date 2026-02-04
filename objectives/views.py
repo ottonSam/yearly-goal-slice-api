@@ -46,6 +46,20 @@ class ObjectiveByTypeListView(ObjectiveBaseView, generics.ListAPIView):
         return super().get_queryset().filter(objective_type=objective_type)
 
 
+class ObjectiveTypeListView(ObjectiveBaseView, generics.GenericAPIView):
+    """
+    List available objective types.
+    """
+
+    @swagger_auto_schema(operation_summary="List objective types", tags=["Objectives"], request_body=None)
+    def get(self, request, *args, **kwargs):
+        objective_types = [
+            {"value": value, "label": label}
+            for value, label in Objective.ObjectiveType.choices
+        ]
+        return Response({"objective_types": objective_types}, status=status.HTTP_200_OK)
+
+
 class ObjectiveByGoalCalendarListView(ObjectiveBaseView, generics.ListAPIView):
     """
     List objectives tied to a specific goal calendar.

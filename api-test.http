@@ -1,0 +1,291 @@
+@baseUrl = http://localhost:8000/api/v1
+@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MDI2NTI4OCwiaWF0IjoxNzcwMTc4ODg4LCJqdGkiOiI3ZGRhOTlmYjE0ZmU0NTBiYmZkNjA5MzhlNjk5MzA4ZCIsInVzZXJfaWQiOiI1Y2I5YjllMy1mMzQ0LTQ3YzctODRkYi01ZTYwZTA5NTRiNjUifQ.7gWXNybmCPsLk8dSlA4P7WUC6cXiHsxYETV9Z7PbjSQ
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwMjM1NDk1LCJpYXQiOjE3NzAyMzQ1OTUsImp0aSI6ImMyODQwN2YxNWUzMzRlZjdhMzI1NDkyNzY4MWY2MTA5IiwidXNlcl9pZCI6IjVjYjliOWUzLWYzNDQtNDdjNy04NGRiLTVlNjBlMDk1NGI2NSJ9.k37ghRBNt4qd5HblW85wz_59VcUPILP-JYqUB-UR2Fw
+@goalCalendarId = 93658d10-b1ba-42fd-b97b-64eaf0bff2bf
+@weekId = 4d6d0f19-9cdc-430e-8e28-a52a5ee278d5
+@objectiveId = 4f2c127a-4745-46d2-a8e1-7cb0ba1861d3
+@frequencyActivityId = 56d90056-691a-4c56-b641-be3866c9c00e
+@quantityActivityId = 6ecb5ce1-704f-4ab4-b7aa-15658ee6a59a
+@specificDaysActivityId = 798ac503-550e-4fb6-a57c-9a78367de078
+
+##### Authentication and User Management
+### Register
+POST {{baseUrl}}/auth/register/
+Content-Type: application/json
+
+{
+  "username": "exampleuser",
+  "email": "exampleuser@email.com",
+  "password": "Teste123!@",
+  "first_name": "example",
+  "last_name": "user"
+}
+
+### Login
+POST {{baseUrl}}/auth/login/
+Content-Type: application/json
+
+{
+  "username": "exampleuser",
+  "password": "Teste123!@"
+}
+
+### Refresh token (set {{refresh}} from login response)
+POST {{baseUrl}}/auth/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "{{refresh}}"
+}
+
+### Me (set {{access}} from login response)
+GET {{baseUrl}}/auth/me/
+Authorization: Bearer {{access}}
+
+### Update profile
+PUT {{baseUrl}}/auth/update-profile/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "first_name": "example_updated",
+  "last_name": "user_updated",
+  "email": "exampleupdateduser@email.com"
+}
+
+### Change password
+POST {{baseUrl}}/auth/change-password/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "current_password": "Teste123!@",
+  "new_password": "Teste123!@"
+}
+
+
+##### Objectives
+### Objective types
+GET {{baseUrl}}/objectives/types/
+Authorization: Bearer {{access}}
+
+### Create objective (goal calendar)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "GOAL_CALENDAR",
+  "goal_calendar": "{{goalCalendarId}}",
+  "title": "Sprint week 1",
+  "description": "Entregar backlog da semana"
+}
+
+### Create objective (LONG_TERM)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "LONG_TERM",
+  "title": "Long term objective",
+  "description": "This is a long term objective"
+}
+
+### Create objective (MEDIUM_TERM)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "MEDIUM_TERM",
+  "title": "Medium term objective",
+  "description": "This is a medium term objective "
+}
+
+### List objectives by type
+GET {{baseUrl}}/objectives/type/LONG_TERM/
+Authorization: Bearer {{access}}
+
+### List objectives by goal calendar
+GET {{baseUrl}}/objectives/goal-calendar/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+### Objective detail (set {{objectiveId}} from create response)
+GET {{baseUrl}}/objectives/{{objectiveId}}/
+Authorization: Bearer {{access}}
+
+### Complete objective
+POST {{baseUrl}}/objectives/{{objectiveId}}/complete/
+Authorization: Bearer {{access}}
+
+
+##### Goal Calendars
+### Create goal calendar
+POST {{baseUrl}}/goal-calendars/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Roadmap",
+  "num_weeks": 6,
+  "start_date": "2026-02-10"
+}
+
+### List goal calendars
+GET {{baseUrl}}/goal-calendars/
+Authorization: Bearer {{access}}
+
+### Goal calendar detail (set {{goalCalendarId}} from create response)
+GET {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+### Update goal calendar
+PUT {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Roadmap updated",
+  "num_weeks": 6,
+  "start_date": "2026-02-04"
+}
+
+### Delete goal calendar
+DELETE {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+
+##### Goal Calendar Weeks
+### List active weeks for a goal calendar
+GET {{baseUrl}}/goal-calendars/{{goalCalendarId}}/weeks/
+Authorization: Bearer {{access}}
+
+
+##### Goal Calendar Weekly Activities
+### Activity metric types
+GET {{baseUrl}}/goal-calendars/activities/metric-types/
+Authorization: Bearer {{access}}
+
+### Create weekly activity
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Gym",
+  "description": "3x per week",
+  "metric_type": "FREQUENCY",
+  "target_frequency": 3
+}
+
+### Update weekly activity (frequency)
+PUT {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{frequencyActivityId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Gym updated",
+  "description": "4x per week",
+  "metric_type": "FREQUENCY",
+  "target_frequency": 4
+}
+
+### Progress weekly activity (frequency)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{frequencyActivityId}}/progress/frequency/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "day": "monday"
+}
+
+### Delete weekly activity (frequency)
+DELETE {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{frequencyActivityId}}/
+Authorization: Bearer {{access}}
+
+### Create weekly activity (quantity)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Commits",
+  "description": "Target commits",
+  "metric_type": "QUANTITY",
+  "target_quantity": 20
+}
+
+### Update weekly activity (quantity)
+PUT {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{quantityActivityId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Commits updated",
+  "description": "Target commits updated",
+  "metric_type": "QUANTITY",
+  "target_quantity": 25
+}
+
+### Progress weekly activity (quantity)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{quantityActivityId}}/progress/quantity/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "amount": 5
+}
+
+### Delete weekly activity (quantity)
+DELETE {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{quantityActivityId}}/
+Authorization: Bearer {{access}}
+
+### Create weekly activity (specific days)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Study",
+  "description": "Specific study days",
+  "metric_type": "SPECIFIC_DAYS",
+  "specific_days": ["monday", "wednesday", "friday"]
+}
+
+### Update weekly activity (specific days)
+PUT {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{specificDaysActivityId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Study updated",
+  "description": "Specific study days updated",
+  "metric_type": "SPECIFIC_DAYS",
+  "specific_days": ["tuesday", "thursday"]
+}
+
+### Progress weekly activity (specific days)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{specificDaysActivityId}}/progress/specific-days/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "day": "tuesday"
+}
+
+### Delete weekly activity (specific days)
+DELETE {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{specificDaysActivityId}}/
+Authorization: Bearer {{access}}
+
+### List weekly activities
+GET {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+
+### Weekly activity report
+GET {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/report/
+Authorization: Bearer {{access}}
+
+
+
+### Continuar daqui

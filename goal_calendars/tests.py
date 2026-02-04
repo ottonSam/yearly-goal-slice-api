@@ -12,6 +12,7 @@ class WeeklyActivityFlowTests(APITestCase):
         self.register_user()
         self.authenticate()
         self.calendar_id = self.create_calendar()
+        self.week_id = self.get_week_id(self.calendar_id, 1)
 
     def register_user(self):
         payload = {
@@ -45,12 +46,11 @@ class WeeklyActivityFlowTests(APITestCase):
         activity_payload = {
             "title": "Gym",
             "description": "3x per week",
-            "week_number": 1,
             "metric_type": "FREQUENCY",
             "target_frequency": 3,
         }
         resp = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/",
             activity_payload,
             format="json",
         )
@@ -58,7 +58,7 @@ class WeeklyActivityFlowTests(APITestCase):
         activity_id = resp.data["id"]
 
         progress_resp = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{activity_id}/progress/frequency/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{activity_id}/progress/frequency/",
             {"day": "monday"},
             format="json",
         )
@@ -67,35 +67,37 @@ class WeeklyActivityFlowTests(APITestCase):
         self.assertIn("monday", progress_resp.data["completed_days"])
 
         report_resp = self.client.get(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/report/",
-            {"week_number": 1},
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/report/",
         )
         self.assertEqual(report_resp.status_code, status.HTTP_200_OK)
         self.assertIn("progress", report_resp.data)
         self.assertTrue(report_resp.data["progress"])
         self.assertGreaterEqual(report_resp.data["general_progress"], 0)
 
-    def test_weekly_activity_list_requires_week_number(self):
-        resp = self.client.get(f"/api/v1/goal-calendars/{self.calendar_id}/activities/")
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("week_number", resp.data)
-
     def test_weekly_activity_list_filters_by_week(self):
-        self.create_activity(metric_type="FREQUENCY", week_number=1, title="Week1", target_frequency=2)
-        self.create_activity(metric_type="FREQUENCY", week_number=2, title="Week2", target_frequency=2)
+        other_week_id = self.get_week_id(self.calendar_id, 2)
+        self.create_activity(metric_type="FREQUENCY", week_id=self.week_id, title="Week1", target_frequency=2)
+        self.create_activity(metric_type="FREQUENCY", week_id=other_week_id, title="Week2", target_frequency=2)
         resp = self.client.get(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/", {"week_number": 1}
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/"
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resp.data), 1)
         self.assertEqual(resp.data[0]["title"], "Week1")
 
+    def test_list_activity_metric_types(self):
+        resp = self.client.get("/api/v1/goal-calendars/activities/metric-types/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn("metric_types", resp.data)
+        values = {item["value"] for item in resp.data["metric_types"]}
+        self.assertTrue({"FREQUENCY", "QUANTITY", "SPECIFIC_DAYS"}.issubset(values))
+
     def test_frequency_progress_rejects_wrong_metric(self):
         qty_activity = self.create_activity(
-            metric_type="QUANTITY", week_number=1, title="Count things", target_quantity=5
+            metric_type="QUANTITY", week_id=self.week_id, title="Count things", target_quantity=5
         )
         resp = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{qty_activity}/progress/frequency/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{qty_activity}/progress/frequency/",
             {"day": "monday"},
             format="json",
         )
@@ -103,10 +105,10 @@ class WeeklyActivityFlowTests(APITestCase):
 
     def test_quantity_progress_success_and_validation(self):
         qty_activity = self.create_activity(
-            metric_type="QUANTITY", week_number=1, title="Count commits", target_quantity=10
+            metric_type="QUANTITY", week_id=self.week_id, title="Count commits", target_quantity=10
         )
         resp = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{qty_activity}/progress/quantity/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{qty_activity}/progress/quantity/",
             {"amount": 3},
             format="json",
         )
@@ -114,7 +116,7 @@ class WeeklyActivityFlowTests(APITestCase):
         self.assertEqual(resp.data["quantity_progress"], 3)
 
         invalid_resp = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{qty_activity}/progress/quantity/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{qty_activity}/progress/quantity/",
             {"amount": -1},
             format="json",
         )
@@ -124,12 +126,12 @@ class WeeklyActivityFlowTests(APITestCase):
     def test_specific_days_progress_success_and_duplicate_check(self):
         specific_activity = self.create_activity(
             metric_type="SPECIFIC_DAYS",
-            week_number=1,
+            week_id=self.week_id,
             title="Yoga days",
             specific_days=["monday", "wednesday"],
         )
         first = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{specific_activity}/progress/specific-days/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{specific_activity}/progress/specific-days/",
             {"day": "monday"},
             format="json",
         )
@@ -137,7 +139,7 @@ class WeeklyActivityFlowTests(APITestCase):
         self.assertIn("monday", first.data["completed_days"])
 
         duplicate = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{specific_activity}/progress/specific-days/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{specific_activity}/progress/specific-days/",
             {"day": "monday"},
             format="json",
         )
@@ -145,36 +147,24 @@ class WeeklyActivityFlowTests(APITestCase):
         self.assertIn("day", duplicate.data)
 
         not_configured = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/{specific_activity}/progress/specific-days/",
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{specific_activity}/progress/specific-days/",
             {"day": "friday"},
             format="json",
         )
         self.assertEqual(not_configured.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("day", not_configured.data)
 
-    def test_weekly_report_requires_valid_week_number(self):
-        missing = self.client.get(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/report/",
-        )
-        self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
-        invalid = self.client.get(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/report/", {"week_number": "abc"}
-        )
-        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
-
     def test_cannot_access_other_users_calendar(self):
-        other_calendar = self.create_calendar_for_other_user()
+        other_week_id = self.create_week_for_other_user()
         resp = self.client.get(
-            f"/api/v1/goal-calendars/{other_calendar}/activities/",
-            {"week_number": 1},
+            f"/api/v1/goal-calendars/weeks/{other_week_id}/activities/",
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     # Helpers
-    def create_activity(self, metric_type, week_number, title, **extra):
+    def create_activity(self, metric_type, week_id, title, **extra):
         payload = {
             "title": title,
-            "week_number": week_number,
             "metric_type": metric_type,
             "target_frequency": None,
             "target_quantity": None,
@@ -182,14 +172,22 @@ class WeeklyActivityFlowTests(APITestCase):
             **extra,
         }
         resp = self.client.post(
-            f"/api/v1/goal-calendars/{self.calendar_id}/activities/",
+            f"/api/v1/goal-calendars/weeks/{week_id}/activities/",
             payload,
             format="json",
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         return resp.data["id"]
 
-    def create_calendar_for_other_user(self):
+    def get_week_id(self, calendar_id, week_num):
+        resp = self.client.get(f"/api/v1/goal-calendars/{calendar_id}/weeks/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for week in resp.data:
+            if week["week_num"] == week_num:
+                return week["id"]
+        self.fail(f"Week {week_num} not found for calendar {calendar_id}")
+
+    def create_week_for_other_user(self):
         # remove current auth to register and login as another user
         self.client.credentials()
         other_payload = {
@@ -214,6 +212,8 @@ class WeeklyActivityFlowTests(APITestCase):
             format="json",
         )
         calendar_id = resp.data["id"]
+        weeks_resp = self.client.get(f"/api/v1/goal-calendars/{calendar_id}/weeks/")
+        week_id = weeks_resp.data[0]["id"]
         # restore original user auth
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
-        return calendar_id
+        return week_id
