@@ -6,12 +6,14 @@ from .views import (
     ProfileUpdateView,
     RefreshTokenView,
     RegisterView,
+    VerifyEmailView,
 )
 
 
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
+    path('auth/verify-email/', VerifyEmailView.as_view(), name='auth-verify-email'),
     path('auth/refresh/', RefreshTokenView.as_view(), name='auth-refresh'),
     path('auth/me/', MeView.as_view(), name='auth-me'),
     path('auth/update-profile/', ProfileUpdateView.as_view(), name='auth-update-profile'),

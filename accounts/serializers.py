@@ -1,5 +1,9 @@
 from django.contrib.auth import get_user_model, password_validation
+from django.utils import timezone
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+from .email_verification import refresh_and_send_verification_code
 
 
 User = get_user_model()
@@ -68,4 +72,50 @@ class PasswordChangeSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs.get('current_password') == attrs.get('new_password'):
             raise serializers.ValidationError({"new_password": "New password must be different from the current one."})
+        return attrs
+
+
+class EmailVerificationTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        user = self.user
+        if not user.email_verified:
+            now = timezone.now()
+            if user.email_verification_expires_at and user.email_verification_expires_at <= now:
+                refresh_and_send_verification_code(user)
+                raise serializers.ValidationError(
+                    {"detail": "Code expired. A new code was sent to your email."}
+                )
+            refresh_and_send_verification_code(user)
+            raise serializers.ValidationError(
+                {"detail": "User not confirmed. A code was sent to your email."}
+            )
+        return data
+
+
+class VerifyEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    code = serializers.CharField(required=True, allow_blank=False, write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        code = attrs.get("code")
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "User not found."})
+
+        if user.email_verified:
+            raise serializers.ValidationError({"detail": "Email already confirmed."})
+
+        if user.is_email_verification_expired():
+            refresh_and_send_verification_code(user)
+            raise serializers.ValidationError(
+                {"detail": "Code expired. A new code was sent to your email."}
+            )
+
+        if not user.check_email_verification_code(code):
+            raise serializers.ValidationError({"code": "Invalid code."})
+
+        attrs["user"] = user
         return attrs
