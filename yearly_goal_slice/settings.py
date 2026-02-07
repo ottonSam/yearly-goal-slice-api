@@ -102,17 +102,28 @@ WSGI_APPLICATION = 'yearly_goal_slice.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DB_ENGINE = os.environ.get('DJANGO_DB_ENGINE', 'django.db.backends.sqlite3')
-DB_NAME = (
-    (BASE_DIR / os.environ['DJANGO_DB_NAME'])
-    if 'DJANGO_DB_NAME' in os.environ and not os.path.isabs(os.environ['DJANGO_DB_NAME'])
-    else os.environ.get('DJANGO_DB_NAME', BASE_DIR / 'db.sqlite3')
-)
+if DB_ENGINE.endswith('sqlite3'):
+    DB_NAME = (
+        (BASE_DIR / os.environ['DJANGO_DB_NAME'])
+        if 'DJANGO_DB_NAME' in os.environ and not os.path.isabs(os.environ['DJANGO_DB_NAME'])
+        else os.environ.get('DJANGO_DB_NAME', BASE_DIR / 'db.sqlite3')
+    )
+else:
+    DB_NAME = os.environ.get('DJANGO_DB_NAME', '')
+DB_USER = os.environ.get('DJANGO_DB_USER', '')
+DB_PASSWORD = os.environ.get('DJANGO_DB_PASSWORD', '')
+DB_HOST = os.environ.get('DJANGO_DB_HOST', '')
+DB_PORT = os.environ.get('DJANGO_DB_PORT', '')
 DB_TEST_NAME = os.environ.get('DJANGO_DB_TEST_NAME', ':memory:' if DB_ENGINE.endswith('sqlite3') else None)
 
 DATABASES = {
     'default': {
         'ENGINE': DB_ENGINE,
         'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
         'TEST': {'NAME': DB_TEST_NAME} if DB_TEST_NAME else {},
     }
 }
