@@ -1,0 +1,49 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Helvetica, Arial, sans-serif" />
+    </mj-attributes>
+    <mj-style>
+      .card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+      }
+      .accent {
+        color: #16a34a;
+      }
+      .code {
+        font-size: 28px;
+        letter-spacing: 4px;
+        color: #16a34a;
+        font-weight: bold;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f4f7f5">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text align="center" font-size="20px" font-weight="bold" color="#16a34a">
+          Confirmacao de email
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0 16px 24px">
+      <mj-column css-class="card" padding="24px">
+        <mj-text>
+          Use o codigo abaixo para confirmar seu email:
+        </mj-text>
+        <mj-text align="center" css-class="code">
+          {{ code }}
+        </mj-text>
+        <mj-text>
+          Este codigo expira em 2 horas.
+        </mj-text>
+        <mj-text font-size="12px" color="#6b7280">
+          Se voce nao solicitou este email, ignore esta mensagem.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

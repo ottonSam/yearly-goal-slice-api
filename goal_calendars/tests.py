@@ -4,12 +4,18 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
+
 
 class WeeklyActivityFlowTests(APITestCase):
     maxDiff = None
 
     def setUp(self):
         self.register_user()
+        self.verify_email("alice@example.com")
         self.authenticate()
         self.calendar_id = self.create_calendar()
         self.week_id = self.get_week_id(self.calendar_id, 1)
@@ -24,6 +30,13 @@ class WeeklyActivityFlowTests(APITestCase):
         }
         resp = self.client.post("/api/v1/auth/register/", payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def verify_email(self, email):
+        user = User.objects.get(email=email)
+        user.email_verified = True
+        user.email_verification_code_hash = None
+        user.email_verification_expires_at = None
+        user.save(update_fields=["email_verified", "email_verification_code_hash", "email_verification_expires_at"])
 
     def authenticate(self):
         resp = self.client.post(
@@ -198,6 +211,7 @@ class WeeklyActivityFlowTests(APITestCase):
             "last_name": "Tester",
         }
         self.client.post("/api/v1/auth/register/", other_payload, format="json")
+        self.verify_email("charlie@example.com")
         login_resp = self.client.post(
             "/api/v1/auth/login/",
             {"username": "charlie", "password": "StrongPass123!"},

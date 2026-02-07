@@ -1,6 +1,6 @@
 @baseUrl = http://localhost:8000/api/v1
-@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MDI2NTI4OCwiaWF0IjoxNzcwMTc4ODg4LCJqdGkiOiI3ZGRhOTlmYjE0ZmU0NTBiYmZkNjA5MzhlNjk5MzA4ZCIsInVzZXJfaWQiOiI1Y2I5YjllMy1mMzQ0LTQ3YzctODRkYi01ZTYwZTA5NTRiNjUifQ.7gWXNybmCPsLk8dSlA4P7WUC6cXiHsxYETV9Z7PbjSQ
-@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwMjM1NDk1LCJpYXQiOjE3NzAyMzQ1OTUsImp0aSI6ImMyODQwN2YxNWUzMzRlZjdhMzI1NDkyNzY4MWY2MTA5IiwidXNlcl9pZCI6IjVjYjliOWUzLWYzNDQtNDdjNy04NGRiLTVlNjBlMDk1NGI2NSJ9.k37ghRBNt4qd5HblW85wz_59VcUPILP-JYqUB-UR2Fw
+@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MDU3MzI5OSwiaWF0IjoxNzcwNDg2ODk5LCJqdGkiOiJhMzBjZTQxNGYzOGI0NTUxYjRmYjY3YTdhMTMyNGQ1MiIsInVzZXJfaWQiOiJhMjc1YTA4Mi0yNjA0LTQ0MTItOThlZS00MGU3MGEwNmRjYzgifQ.fFW-fg0R0E2EQGrZMvcPa0FoNC9YTt2Dt1kUoB-jOJw
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwNDg3Nzk5LCJpYXQiOjE3NzA0ODY4OTksImp0aSI6ImU3MzAyMWRlZTIzNzQ3ODFiNTdmZjllMGRkMGMyYWU4IiwidXNlcl9pZCI6ImEyNzVhMDgyLTI2MDQtNDQxMi05OGVlLTQwZTcwYTA2ZGNjOCJ9.oBrsFZuH_Vx_yp1NF9kqdEZQYBgfSpicH4Ihw-vGHh4
 @goalCalendarId = 93658d10-b1ba-42fd-b97b-64eaf0bff2bf
 @weekId = 4d6d0f19-9cdc-430e-8e28-a52a5ee278d5
 @objectiveId = 4f2c127a-4745-46d2-a8e1-7cb0ba1861d3
@@ -28,6 +28,15 @@ Content-Type: application/json
 {
   "username": "exampleuser",
   "password": "Teste123!@"
+}
+
+### Verify email
+POST {{baseUrl}}/auth/verify-email/
+Content-Type: application/json
+
+{
+  "email": "exampleuser@email.com",
+  "code": "926711"
 }
 
 ### Refresh token (set {{refresh}} from login response)

@@ -46,6 +46,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-31=j8!z14y)onx
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(strtobool(os.environ.get('DJANGO_DEBUG', 'False')))
+APP_ENV = os.environ.get('APP_ENV', 'dev').lower()
 
 ALLOWED_HOSTS = [host for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if host]
 
@@ -179,6 +180,23 @@ SWAGGER_SETTINGS = {
         },
     },
 }
+
+# Email configuration
+if APP_ENV == 'prod':
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('SMTP_HOST', '')
+    EMAIL_PORT = int(os.environ.get('SMTP_PORT', '25'))
+    EMAIL_HOST_USER = os.environ.get('SMTP_SENDER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+    EMAIL_USE_TLS = bool(strtobool(os.environ.get('SMTP_USE_TLS', 'False')))
+    EMAIL_USE_SSL = bool(strtobool(os.environ.get('SMTP_USE_SSL', 'False')))
+    if EMAIL_USE_TLS and EMAIL_USE_SSL:
+        # Prefer SSL when both are set (common for port 465)
+        EMAIL_USE_TLS = False
+    DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'no-reply@example.com'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'no-reply@example.com'
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
