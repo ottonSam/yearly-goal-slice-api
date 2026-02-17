@@ -12,6 +12,7 @@ class User(AbstractUser):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
     email_verified = models.BooleanField(default=False)
     email_verification_code_hash = models.CharField(max_length=128, blank=True, null=True)
     email_verification_expires_at = models.DateTimeField(blank=True, null=True)
