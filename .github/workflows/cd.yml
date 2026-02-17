@@ -12,11 +12,7 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          set -euo pipefail
-          test -n "${SSH_KEY:-}" || (echo "SSH_PRIVATE_KEY está vazio" && exit 1)
-          printf "%s" "$SSH_KEY" | sed 's/\r$//' > /tmp/key
-          chmod 600 /tmp/key
-          ssh-keygen -lf /tmp/key
+          printf "%s" "$SSH_KEY"
 
       - name: Conectar via SSH e Deploy
         uses: appleboy/ssh-action@master
