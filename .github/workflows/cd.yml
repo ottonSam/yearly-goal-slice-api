@@ -7,13 +7,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Validar secret da chave (sem vazar)
-        shell: bash
-        env:
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          printf "%s" "$SSH_KEY"
-
       - name: Conectar via SSH e Deploy
         uses: appleboy/ssh-action@master
         with:
