@@ -28,7 +28,6 @@ class AccountUpdateTests(APITestCase):
         payload = {
             'first_name': 'Updated',
             'last_name': 'Name',
-            'email': 'newemail@example.com',
         }
 
         response = self.client.patch(reverse('auth-update-profile'), data=payload, format='json')
@@ -37,13 +36,11 @@ class AccountUpdateTests(APITestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, payload['first_name'])
         self.assertEqual(self.user.last_name, payload['last_name'])
-        self.assertEqual(self.user.email, payload['email'])
 
     def test_update_profile_with_invalid_name(self):
         payload = {
             'first_name': '12',
             'last_name': 'User',
-            'email': 'tester@example.com',
         }
 
         response = self.client.patch(reverse('auth-update-profile'), data=payload, format='json')

@@ -51,10 +51,9 @@ class UserSerializer(NameValidationMixin, serializers.ModelSerializer):
 class UserProfileUpdateSerializer(NameValidationMixin, serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name')
+        fields = ('id', 'username', 'first_name', 'last_name')
         read_only_fields = ('id', 'username')
         extra_kwargs = {
-            'email': {'required': True, 'allow_blank': False},
             'first_name': {'required': True, 'allow_blank': False},
             'last_name': {'required': True, 'allow_blank': False},
         }

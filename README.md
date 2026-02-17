@@ -34,7 +34,7 @@ Rotas principais (prefixo `/api/v1/`)
   - `POST /auth/login/` retorna `access` e `refresh`.
   - `POST /auth/refresh/` renova token.
   - `GET /auth/me/` dados do usuario autenticado.
-  - `PUT /auth/update-profile/` atualiza perfil do usuario autenticado.
+  - `PUT /auth/update-profile/` atualiza perfil do usuario autenticado (nome e sobrenome).
   - `PUT /auth/change-password/` altera senha do usuario autenticado.
 - Goal calendars
   - `GET/POST /goal-calendars/` lista/cria calendarios do usuario logado.

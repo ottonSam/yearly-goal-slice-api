@@ -54,7 +54,7 @@ class RefreshTokenView(TokenRefreshView):
 
 class ProfileUpdateView(generics.UpdateAPIView):
     """
-    Update basic user data (first name, last name, email) for the authenticated user.
+    Update basic user data (first name, last name) for the authenticated user.
     """
 
     serializer_class = UserProfileUpdateSerializer

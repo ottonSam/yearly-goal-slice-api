@@ -49,6 +49,9 @@ DEBUG = bool(strtobool(os.environ.get('DJANGO_DEBUG', 'False')))
 APP_ENV = os.environ.get('APP_ENV', 'dev').lower()
 
 ALLOWED_HOSTS = [host for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if host]
+CORS_ALLOWED_ORIGINS = [
+    origin for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin
+]
 
 
 # Application definition
@@ -61,6 +64,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'corsheaders',
     'rest_framework',
     'drf_yasg',
     'accounts',
@@ -70,6 +74,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

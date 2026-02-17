@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -9,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-      DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
-      DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
-      APP_ENV: dev
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      APP_ENV: "dev"
       DJANGO_DB_ENGINE: ${{ secrets.DJANGO_DB_ENGINE }}
       DJANGO_DB_NAME: ${{ secrets.POSTGRES_DB }}
       DJANGO_DB_USER: ${{ secrets.POSTGRES_USER }}
