@@ -19,7 +19,7 @@ jobs:
           ssh-keygen -lf /tmp/key
 
       - name: Conectar via SSH e Deploy
-        uses: appleboy/ssh-action@v1.8.2
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
