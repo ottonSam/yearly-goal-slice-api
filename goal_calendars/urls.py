@@ -10,6 +10,7 @@ from .views import (
     WeeklyActivityQuantityProgressView,
     WeeklyActivitySpecificDaysProgressView,
     WeeklyActivityMetricTypeListView,
+    WeeklyActivityAIWeekReportView,
     WeeklyActivityWeekReportView,
 )
 
@@ -56,5 +57,10 @@ urlpatterns = [
         'goal-calendars/weeks/<uuid:week_id>/activities/report/',
         WeeklyActivityWeekReportView.as_view(),
         name='weekly-activity-week-report',
+    ),
+    path(
+        'goal-calendars/weeks/<uuid:week_id>/activities/report/ai/',
+        WeeklyActivityAIWeekReportView.as_view(),
+        name='weekly-activity-ai-week-report',
     ),
 ]
