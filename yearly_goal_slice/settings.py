@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from datetime import timedelta
 def strtobool(val: str) -> int:
     """Convert common string values to 0/1, mirroring distutils.util.strtobool."""
@@ -133,6 +134,15 @@ DATABASES = {
         'TEST': {'NAME': DB_TEST_NAME} if DB_TEST_NAME else {},
     }
 }
+
+# Tests default to SQLite to avoid external DB dependency in local runs.
+IS_TEST_RUN = any(arg in {'test', 'pytest'} for arg in sys.argv)
+USE_SQLITE_FOR_TESTS = bool(strtobool(os.environ.get('DJANGO_USE_SQLITE_FOR_TESTS', 'True')))
+if IS_TEST_RUN and USE_SQLITE_FOR_TESTS:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.environ.get('DJANGO_DB_TEST_NAME', ':memory:'),
+    }
 
 
 # Password validation
