@@ -17,6 +17,21 @@ ALLOWED_WEEK_DAYS = {
 }
 
 
+def get_activity_completion_percentage(activity):
+    if activity.metric_type == WeeklyActivity.MetricType.FREQUENCY:
+        target = activity.target_frequency or 0
+        progress = (activity.frequency_progress / target * 100) if target else 0
+    elif activity.metric_type == WeeklyActivity.MetricType.QUANTITY:
+        target = activity.target_quantity or 0
+        progress = (activity.quantity_progress / target * 100) if target else 0
+    else:  # SPECIFIC_DAYS
+        total_days = len(activity.specific_days or [])
+        completed_days = len(set(str(day).lower() for day in activity.completed_days or []))
+        progress = (completed_days / total_days * 100) if total_days else 0
+
+    return round(min(progress, 100), 2)
+
+
 class GoalCalendarBaseSerializer(serializers.ModelSerializer):
     end_date = serializers.SerializerMethodField(read_only=True)
     start_weekday = serializers.SerializerMethodField(read_only=True)
@@ -112,6 +127,7 @@ class GoalCalendarBaseSerializer(serializers.ModelSerializer):
 class GoalCalendarWeekSerializer(serializers.ModelSerializer):
     start_week = serializers.SerializerMethodField(read_only=True)
     end_week = serializers.SerializerMethodField(read_only=True)
+    average_completion_percentage = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = GoalCalendarWeek
@@ -120,6 +136,7 @@ class GoalCalendarWeekSerializer(serializers.ModelSerializer):
             'week_num',
             'start_week',
             'end_week',
+            'average_completion_percentage',
             'report',
             'active',
             'created_at',
@@ -132,6 +149,19 @@ class GoalCalendarWeekSerializer(serializers.ModelSerializer):
 
     def get_end_week(self, obj):
         return obj.get_end_week()
+
+    def get_average_completion_percentage(self, obj):
+        activities = getattr(obj, 'active_weekly_activities', None)
+        if activities is None:
+            activities = list(obj.weekly_activities.filter(active=True))
+        else:
+            activities = list(activities)
+
+        if not activities:
+            return 0
+
+        completion_values = [get_activity_completion_percentage(activity) for activity in activities]
+        return round(sum(completion_values) / len(completion_values), 2)
 
 
 class GoalCalendarSerializer(GoalCalendarBaseSerializer):
@@ -150,9 +180,14 @@ class GoalCalendarListSerializer(GoalCalendarBaseSerializer):
     pass
 
 
+class WeeklyActivityAIReportRequestSerializer(serializers.Serializer):
+    reflection = serializers.CharField(min_length=10, max_length=3000, required=True)
+
+
 
 class WeeklyActivitySerializer(serializers.ModelSerializer):
     week = serializers.PrimaryKeyRelatedField(read_only=True)
+    completion_percentage = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = WeeklyActivity
@@ -168,6 +203,7 @@ class WeeklyActivitySerializer(serializers.ModelSerializer):
             'frequency_progress',
             'quantity_progress',
             'completed_days',
+            'completion_percentage',
             'active',
             'created_at',
             'updated_at',
@@ -178,10 +214,14 @@ class WeeklyActivitySerializer(serializers.ModelSerializer):
             'frequency_progress',
             'quantity_progress',
             'completed_days',
+            'completion_percentage',
             'active',
             'created_at',
             'updated_at',
         )
+
+    def get_completion_percentage(self, obj):
+        return get_activity_completion_percentage(obj)
 
     def validate(self, attrs):
         week = self.context.get('week')

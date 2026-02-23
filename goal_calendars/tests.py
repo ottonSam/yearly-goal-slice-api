@@ -1,10 +1,13 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from django.contrib.auth import get_user_model
+
+from .models import GoalCalendarWeek, WeeklyActivity
 
 
 User = get_user_model()
@@ -98,6 +101,193 @@ class WeeklyActivityFlowTests(APITestCase):
         self.assertEqual(len(resp.data), 1)
         self.assertEqual(resp.data[0]["title"], "Week1")
 
+    def test_weekly_activity_list_includes_completion_percentage(self):
+        activity_id = self.create_activity(
+            metric_type="FREQUENCY",
+            week_id=self.week_id,
+            title="Week progress",
+            target_frequency=2,
+        )
+        self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{activity_id}/progress/frequency/",
+            {"day": "monday"},
+            format="json",
+        )
+
+        resp = self.client.get(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data[0]["completion_percentage"], 50.0)
+
+    def test_week_list_includes_average_completion_of_active_activities(self):
+        frequency_activity = self.create_activity(
+            metric_type="FREQUENCY",
+            week_id=self.week_id,
+            title="Frequency task",
+            target_frequency=2,
+        )
+        quantity_activity = self.create_activity(
+            metric_type="QUANTITY",
+            week_id=self.week_id,
+            title="Quantity task",
+            target_quantity=10,
+        )
+        inactive_activity = self.create_activity(
+            metric_type="SPECIFIC_DAYS",
+            week_id=self.week_id,
+            title="Inactive task",
+            specific_days=["monday", "wednesday"],
+        )
+        WeeklyActivity.objects.filter(id=inactive_activity).update(active=False)
+
+        self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{frequency_activity}/progress/frequency/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{quantity_activity}/progress/quantity/",
+            {"amount": 5},
+            format="json",
+        )
+
+        weeks_resp = self.client.get(f"/api/v1/goal-calendars/{self.calendar_id}/weeks/")
+        self.assertEqual(weeks_resp.status_code, status.HTTP_200_OK)
+
+        week_one = next(week for week in weeks_resp.data if week["week_num"] == 1)
+        self.assertEqual(week_one["average_completion_percentage"], 50.0)
+
+    @patch("goal_calendars.views.DeepSeekWeeklyReportService.generate_week_report")
+    def test_generate_ai_week_report(self, mock_generate_week_report):
+        mock_generate_week_report.return_value = "Bom avanço na semana. Foque em manter consistência."
+
+        week_2_id = self.get_week_id(self.calendar_id, 2)
+        week_3_id = self.get_week_id(self.calendar_id, 3)
+        week_4_id = self.get_week_id(self.calendar_id, 4)
+
+        week_1_activity = self.create_activity(
+            metric_type="FREQUENCY",
+            week_id=self.week_id,
+            title="Week 1 activity",
+            target_frequency=2,
+        )
+        week_2_activity = self.create_activity(
+            metric_type="QUANTITY",
+            week_id=week_2_id,
+            title="Week 2 activity",
+            target_quantity=10,
+        )
+        week_3_activity = self.create_activity(
+            metric_type="SPECIFIC_DAYS",
+            week_id=week_3_id,
+            title="Week 3 activity",
+            specific_days=["monday", "wednesday"],
+        )
+        week_4_activity = self.create_activity(
+            metric_type="FREQUENCY",
+            week_id=week_4_id,
+            title="Week 4 activity",
+            target_frequency=4,
+        )
+
+        self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{week_1_activity}/progress/frequency/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.client.post(
+            f"/api/v1/goal-calendars/weeks/{week_2_id}/activities/{week_2_activity}/progress/quantity/",
+            {"amount": 5},
+            format="json",
+        )
+        self.client.post(
+            f"/api/v1/goal-calendars/weeks/{week_3_id}/activities/{week_3_activity}/progress/specific-days/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.client.post(
+            f"/api/v1/goal-calendars/weeks/{week_4_id}/activities/{week_4_activity}/progress/frequency/",
+            {"day": "monday"},
+            format="json",
+        )
+
+        GoalCalendarWeek.objects.filter(id=self.week_id).update(report="Semana 1 com ajustes")
+        GoalCalendarWeek.objects.filter(id=week_2_id).update(report="Semana 2 estável")
+        GoalCalendarWeek.objects.filter(id=week_3_id).update(report="Semana 3 melhor que a anterior")
+
+        week_4 = GoalCalendarWeek.objects.get(id=week_4_id)
+        with patch("goal_calendars.views.timezone.localdate", return_value=week_4.get_end_week()):
+            resp = self.client.post(
+                f"/api/v1/goal-calendars/weeks/{week_4_id}/activities/report/ai/",
+                {
+                    "reflection": (
+                        "Me senti mais focado, mas tive dificuldade para manter rotina nos dias de maior carga."
+                    )
+                },
+                format="json",
+            )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["week_num"], 4)
+        self.assertEqual(resp.data["report"], "Bom avanço na semana. Foque em manter consistência.")
+        self.assertEqual(len(resp.data["last_three_weeks_reports"]), 3)
+
+        self.assertTrue(mock_generate_week_report.called)
+        call_context = mock_generate_week_report.call_args.args[0]
+        self.assertEqual(call_context["good_performance_threshold_percentage"], 85)
+        self.assertEqual(call_context["week_num"], 4)
+        self.assertEqual(len(call_context["last_three_weeks_reports"]), 3)
+
+        refreshed_week = GoalCalendarWeek.objects.get(id=week_4_id)
+        self.assertEqual(refreshed_week.report, "Bom avanço na semana. Foque em manter consistência.")
+
+    def test_generate_ai_week_report_rejects_before_week_end(self):
+        resp = self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/report/ai/",
+            {
+                "reflection": (
+                    "Consegui avançar, mas ainda não finalizei a rotina e preciso organizar melhor os horários."
+                )
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            resp.data["detail"],
+            "AI report can only be generated on or after the final day of the week.",
+        )
+        self.assertIn("week_end", resp.data)
+        self.assertIn("today", resp.data)
+
+    @patch("goal_calendars.views.DeepSeekWeeklyReportService.generate_week_report")
+    def test_generate_ai_week_report_rejects_if_already_generated(self, mock_generate_week_report):
+        GoalCalendarWeek.objects.filter(id=self.week_id).update(report="Relatório já existe")
+        week = GoalCalendarWeek.objects.get(id=self.week_id)
+        with patch("goal_calendars.views.timezone.localdate", return_value=week.get_end_week()):
+            resp = self.client.post(
+                f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/report/ai/",
+                {
+                    "reflection": (
+                        "Semana consistente, com pequenas dificuldades em manter energia no fim dos dias."
+                    )
+                },
+                format="json",
+            )
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(resp.data["detail"], "This week report has already been generated.")
+        self.assertFalse(mock_generate_week_report.called)
+
+    def test_generate_ai_week_report_requires_reflection(self):
+        resp = self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/report/ai/",
+            {},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("reflection", resp.data)
+
     def test_list_activity_metric_types(self):
         resp = self.client.get("/api/v1/goal-calendars/activities/metric-types/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -115,6 +305,30 @@ class WeeklyActivityFlowTests(APITestCase):
             format="json",
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_frequency_progress_rejects_duplicate_day(self):
+        activity_id = self.create_activity(
+            metric_type="FREQUENCY",
+            week_id=self.week_id,
+            title="Frequency duplicate day",
+            target_frequency=3,
+        )
+
+        first = self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{activity_id}/progress/frequency/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data["frequency_progress"], 1)
+
+        duplicate = self.client.post(
+            f"/api/v1/goal-calendars/weeks/{self.week_id}/activities/{activity_id}/progress/frequency/",
+            {"day": "monday"},
+            format="json",
+        )
+        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("day", duplicate.data)
 
     def test_quantity_progress_success_and_validation(self):
         qty_activity = self.create_activity(
