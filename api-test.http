@@ -1,13 +1,14 @@
 @baseUrl = http://localhost:8000/api/v1
-@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MDU3MzI5OSwiaWF0IjoxNzcwNDg2ODk5LCJqdGkiOiJhMzBjZTQxNGYzOGI0NTUxYjRmYjY3YTdhMTMyNGQ1MiIsInVzZXJfaWQiOiJhMjc1YTA4Mi0yNjA0LTQ0MTItOThlZS00MGU3MGEwNmRjYzgifQ.fFW-fg0R0E2EQGrZMvcPa0FoNC9YTt2Dt1kUoB-jOJw
-@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwNDg3Nzk5LCJpYXQiOjE3NzA0ODY4OTksImp0aSI6ImU3MzAyMWRlZTIzNzQ3ODFiNTdmZjllMGRkMGMyYWU4IiwidXNlcl9pZCI6ImEyNzVhMDgyLTI2MDQtNDQxMi05OGVlLTQwZTcwYTA2ZGNjOCJ9.oBrsFZuH_Vx_yp1NF9kqdEZQYBgfSpicH4Ihw-vGHh4
-@goalCalendarId = 93658d10-b1ba-42fd-b97b-64eaf0bff2bf
-@weekId = 4d6d0f19-9cdc-430e-8e28-a52a5ee278d5
+@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MTk1ODE2OSwiaWF0IjoxNzcxODcxNzY5LCJqdGkiOiI3MTc3ZGNlNjNhY2E0YTc4OGI1Y2QzNDI2ZWVmNDk5OCIsInVzZXJfaWQiOiIyOTZiNmMwYi0wMDE3LTQxZDYtODFjYy1lYzlkOWI2YmI4YzIifQ.bCxLHxxWfvKy0rQInUt5fSq_fNPZ7NTjJKaM8uXq-DQ
+
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcxODczODU4LCJpYXQiOjE3NzE4NzE3NjksImp0aSI6IjA2NzJiODcwNGU5MzRkOTdiOWJjOWI1ODM5NTFiMmNkIiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.5WUmyxKG-OxbFnqb0onQjXfdRLyRV-d29Qe5-KPcDl0
+
+@weekId = 8e2fe807-676e-48e6-9bb6-827268a67b5e
 @objectiveId = 4f2c127a-4745-46d2-a8e1-7cb0ba1861d3
-@frequencyActivityId = 56d90056-691a-4c56-b641-be3866c9c00e
+@frequencyActivityId = 8bf99d6e-c0f5-4a0b-b78f-745bf9fb6028
 @quantityActivityId = 6ecb5ce1-704f-4ab4-b7aa-15658ee6a59a
 @specificDaysActivityId = 798ac503-550e-4fb6-a57c-9a78367de078
-
+@goalCalendarId = e0d4837c-17be-451c-8895-0db3ae788c03
 ##### Authentication and User Management
 ### Register
 POST {{baseUrl}}/auth/register/
@@ -36,7 +37,7 @@ Content-Type: application/json
 
 {
   "email": "exampleuser@email.com",
-  "code": "926711"
+  "code": "053065"
 }
 
 ### Refresh token (set {{refresh}} from login response)
@@ -136,8 +137,8 @@ Content-Type: application/json
 
 {
   "title": "Roadmap",
-  "num_weeks": 6,
-  "start_date": "2026-02-10"
+  "num_weeks": 12,
+  "start_date": "2026-02-23"
 }
 
 ### List goal calendars
@@ -293,6 +294,15 @@ Authorization: Bearer {{access}}
 ### Weekly activity report
 GET {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/report/
 Authorization: Bearer {{access}}
+
+### Weekly AI report (DeepSeek via OpenAI SDK)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/report/ai/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "reflection": "Me senti bem produtivo, mas tive dificuldade em manter consistência no meio da semana. Prioridades mudaram e precisei adaptar."
+}
 
 
 
