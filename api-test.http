@@ -1,7 +1,7 @@
 @baseUrl = http://localhost:8000/api/v1
 @refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MjE2NDQxOCwiaWF0IjoxNzcyMDc4MDE4LCJqdGkiOiI1ZDU1MTExZGZkMmI0ZmNjOGQxNmI3ZWJiYWVkNWNjYiIsInVzZXJfaWQiOiIyOTZiNmMwYi0wMDE3LTQxZDYtODFjYy1lYzlkOWI2YmI4YzIifQ.WoUP4IPxyFZIghpcgnjaTLpDdnQSdQd8MDwdQUJ4_6E
 
-@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMDc4OTE4LCJpYXQiOjE3NzIwNzgwMTgsImp0aSI6IjhjNmVmMmI2MjM0MzRmZmFhMTQyYTU4ZmI1NzY0MDIzIiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.uOJJiAApovXksKkrGMbP98ePClzK_qe1FRejpi83HN0
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMDc5ODQ1LCJpYXQiOjE3NzIwNzgwMTgsImp0aSI6IjQwYWNhYmQ1NWJjMzQzMmE4MGMxMjM4ODRlYmRjY2I4IiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.Is6SBSr10JCRUByIXX3NN_NH7OO16VOVQwfEI_0i4PY
 
 @weekId = 8e2fe807-676e-48e6-9bb6-827268a67b5e
 @objectiveId = 4f2c127a-4745-46d2-a8e1-7cb0ba1861d3
@@ -10,6 +10,7 @@
 @specificDaysActivityId = 798ac503-550e-4fb6-a57c-9a78367de078
 @goalCalendarId = e0d4837c-17be-451c-8895-0db3ae788c03
 @walletId = 8aaa2cd6-1877-4f45-925c-17dbc9908671
+@expenseCategoryId = 8d8c7c36-6af7-4ddf-ac66-d7af229b42c8
 ##### Authentication and User Management
 ### Register
 POST {{baseUrl}}/auth/register/
@@ -344,4 +345,38 @@ Content-Type: application/json
 
 ### Delete wallet (soft delete)
 DELETE {{baseUrl}}/wallets/{{walletId}}/
+Authorization: Bearer {{access}}
+
+
+##### Wallet Expense Categories
+### Create expense category
+POST {{baseUrl}}/wallets/categories/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "name": "Alimentação",
+  "icon": "mdi:food",
+  "color": "#FF6B00"
+}
+
+### List expense categories
+GET {{baseUrl}}/wallets/categories/
+Authorization: Bearer {{access}}
+
+### Expense category detail (set {{expenseCategoryId}} from create response)
+GET {{baseUrl}}/wallets/categories/{{expenseCategoryId}}/
+Authorization: Bearer {{access}}
+
+### Patch expense category
+PATCH {{baseUrl}}/wallets/categories/{{expenseCategoryId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "color": "#00C2FF"
+}
+
+### Delete expense category
+DELETE {{baseUrl}}/wallets/categories/{{expenseCategoryId}}/
 Authorization: Bearer {{access}}

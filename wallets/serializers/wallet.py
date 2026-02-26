@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Wallet
+from wallets.models import Wallet
 
 
 class WalletReadSerializer(serializers.ModelSerializer):

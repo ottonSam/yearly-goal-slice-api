@@ -2,13 +2,13 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import filters, permissions, viewsets
 
-from .models import Wallet
-from .permissions import IsWalletOwner
-from .serializers import WalletCreateUpdateSerializer, WalletReadSerializer
+from wallets.models import Wallet
+from wallets.permissions import IsOwner
+from wallets.serializers import WalletCreateUpdateSerializer, WalletReadSerializer
 
 
 WALLET_CREATE_EXAMPLE = {
-    'name': 'Wallet Principal',
+    'name': 'Main Wallet',
     'limit': '5000.00',
     'cycle_limit_default': '3000.00',
     'cycle_starts': 25,
@@ -23,7 +23,7 @@ WALLET_PATCH_EXAMPLE = {
 
 
 class WalletViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated, IsWalletOwner]
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['created_at', 'name']

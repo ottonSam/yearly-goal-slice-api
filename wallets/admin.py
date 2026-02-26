@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Wallet
+from .models import ExpenseCategory, Wallet
 
 
 @admin.register(Wallet)
@@ -18,4 +18,11 @@ class WalletAdmin(admin.ModelAdmin):
     )
     list_filter = ('active',)
     search_fields = ('name', 'user__username', 'user__email')
+    autocomplete_fields = ('user',)
+
+
+@admin.register(ExpenseCategory)
+class ExpenseCategoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'icon', 'color', 'user', 'created_at')
+    search_fields = ('name', 'icon', 'color', 'user__username', 'user__email')
     autocomplete_fields = ('user',)

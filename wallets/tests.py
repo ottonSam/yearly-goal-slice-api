@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Wallet
+from .models import ExpenseCategory, Wallet
 
 
 User = get_user_model()
@@ -162,6 +162,133 @@ class WalletAPITests(APITestCase):
                 'cycle_limit_default': '1000.00',
                 'cycle_starts': 3,
                 'cycle_ends': 18,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user'], str(self.user.id))
+
+
+class ExpenseCategoryAPITests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='category_owner',
+            email='category_owner@example.com',
+            password='StrongPass123!',
+            first_name='Category',
+            last_name='Owner',
+            email_verified=True,
+        )
+        self.other_user = User.objects.create_user(
+            username='category_other',
+            email='category_other@example.com',
+            password='StrongPass123!',
+            first_name='Category',
+            last_name='Other',
+            email_verified=True,
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def create_category(self, **overrides):
+        payload = {
+            'name': 'Alimentacao',
+            'icon': 'mdi:food',
+            'color': '#FF6B00',
+        }
+        payload.update(overrides)
+        return self.client.post('/api/v1/wallets/categories/', payload, format='json')
+
+    def test_crud_category(self):
+        create_response = self.create_category()
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        category_id = create_response.data['id']
+
+        list_response = self.client.get('/api/v1/wallets/categories/')
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+        self.assertEqual(list_response.data[0]['name'], 'Alimentacao')
+
+        detail_response = self.client.get(f'/api/v1/wallets/categories/{category_id}/')
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.data['icon'], 'mdi:food')
+
+        patch_response = self.client.patch(
+            f'/api/v1/wallets/categories/{category_id}/',
+            {'color': '#00C2FF'},
+            format='json',
+        )
+        self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_response.data['color'], '#00C2FF')
+
+        delete_response = self.client.delete(f'/api/v1/wallets/categories/{category_id}/')
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ExpenseCategory.objects.filter(id=category_id).exists())
+
+    def test_category_isolation_by_user(self):
+        category = ExpenseCategory.objects.create(
+            user=self.user,
+            name='Private Category',
+            icon='mdi:shield',
+            color='#111111',
+        )
+        self.client.force_authenticate(user=self.other_user)
+
+        retrieve_response = self.client.get(f'/api/v1/wallets/categories/{category.id}/')
+        self.assertEqual(retrieve_response.status_code, status.HTTP_404_NOT_FOUND)
+
+        patch_response = self.client.patch(
+            f'/api/v1/wallets/categories/{category.id}/',
+            {'color': '#333333'},
+            format='json',
+        )
+        self.assertEqual(patch_response.status_code, status.HTTP_404_NOT_FOUND)
+
+        delete_response = self.client.delete(f'/api/v1/wallets/categories/{category.id}/')
+        self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_name_unique_per_user_case_insensitive(self):
+        first = self.create_category(name='Health')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+
+        duplicate = self.create_category(name='health')
+        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', duplicate.data)
+
+        self.client.force_authenticate(user=self.other_user)
+        allowed = self.client.post(
+            '/api/v1/wallets/categories/',
+            {'name': 'HEALTH', 'icon': 'mdi:heart', 'color': '#AA0000'},
+            format='json',
+        )
+        self.assertEqual(allowed.status_code, status.HTTP_201_CREATED)
+
+    def test_icon_and_color_are_required(self):
+        missing_fields = self.client.post(
+            '/api/v1/wallets/categories/',
+            {'name': 'Transport'},
+            format='json',
+        )
+        self.assertEqual(missing_fields.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(missing_fields.data['icon'][0], 'Icon is required.')
+        self.assertEqual(missing_fields.data['color'][0], 'Color is required.')
+
+        blank_fields = self.client.post(
+            '/api/v1/wallets/categories/',
+            {'name': 'Transport', 'icon': '', 'color': ''},
+            format='json',
+        )
+        self.assertEqual(blank_fields.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(blank_fields.data['icon'][0], 'Icon is required.')
+        self.assertEqual(blank_fields.data['color'][0], 'Color is required.')
+
+    def test_user_is_defined_by_authenticated_user(self):
+        response = self.client.post(
+            '/api/v1/wallets/categories/',
+            {
+                'user': str(self.other_user.id),
+                'name': 'Bills',
+                'icon': 'mdi:file-document',
+                'color': '#123456',
             },
             format='json',
         )
