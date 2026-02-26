@@ -8,7 +8,13 @@ class IsOwner(BasePermission):
         return bool(request.user and request.user.is_authenticated)
 
     def has_object_permission(self, request, view, obj):
-        return obj.user == request.user
+        owner = getattr(obj, 'user', None)
+        if owner is not None:
+            return owner == request.user
+        wallet = getattr(obj, 'wallet', None)
+        if wallet is not None:
+            return wallet.user == request.user
+        return False
 
 
 # Backward-compatible alias

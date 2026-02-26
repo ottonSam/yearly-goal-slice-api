@@ -1,10 +1,11 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import ExpenseCategory, Wallet
+from .models import ExpenseCategory, ExpenseCycle, Wallet
 
 
 User = get_user_model()
@@ -294,3 +295,173 @@ class ExpenseCategoryAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['user'], str(self.user.id))
+
+
+class ExpenseCycleAPITests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='cycle_owner',
+            email='cycle_owner@example.com',
+            password='StrongPass123!',
+            first_name='Cycle',
+            last_name='Owner',
+            email_verified=True,
+        )
+        self.other_user = User.objects.create_user(
+            username='cycle_other',
+            email='cycle_other@example.com',
+            password='StrongPass123!',
+            first_name='Cycle',
+            last_name='Other',
+            email_verified=True,
+        )
+        self.wallet = Wallet.objects.create(
+            user=self.user,
+            name='Main Wallet',
+            limit=Decimal('5000.00'),
+            cycle_limit_default=Decimal('3000.00'),
+            cycle_starts=25,
+            cycle_ends=9,
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def resolve_by_date(self, wallet_id, value):
+        return self.client.post(
+            '/api/v1/wallets/cycle/resolve/',
+            {'wallet': str(wallet_id), 'date': value},
+            format='json',
+        )
+
+    def create_cycle(self, wallet, month='2026-02-01', start_date='2026-02-25', end_date='2026-03-09'):
+        return ExpenseCycle.objects.create(
+            wallet=wallet,
+            month=month,
+            limit=Decimal('3000.00'),
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def test_resolve_creates_and_then_returns_existing_cycle(self):
+        first = self.resolve_by_date(self.wallet.id, '2026-02-26')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(first.data['created'])
+        cycle_id = first.data['cycle']['id']
+
+        second = self.resolve_by_date(self.wallet.id, '2026-03-02')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertFalse(second.data['created'])
+        self.assertEqual(second.data['cycle']['id'], cycle_id)
+
+    def test_cross_month_cycle_end_date(self):
+        response = self.resolve_by_date(self.wallet.id, '2026-02-26')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['cycle']['start_date'], '2026-02-25')
+        self.assertEqual(response.data['cycle']['end_date'], '2026-03-09')
+        self.assertEqual(response.data['cycle']['month'], '2026-02-01')
+
+    def test_only_limit_can_be_updated(self):
+        cycle = ExpenseCycle.objects.create(
+            wallet=self.wallet,
+            month='2026-02-01',
+            limit=Decimal('3000.00'),
+            start_date='2026-02-25',
+            end_date='2026-03-09',
+        )
+
+        invalid_update = self.client.patch(
+            f'/api/v1/wallets/cycle/{cycle.id}/',
+            {'start_date': '2026-02-24'},
+            format='json',
+        )
+        self.assertEqual(invalid_update.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Only the 'limit' field can be updated.", str(invalid_update.data))
+
+        valid_update = self.client.patch(
+            f'/api/v1/wallets/cycle/{cycle.id}/',
+            {'limit': '1500.00'},
+            format='json',
+        )
+        self.assertEqual(valid_update.status_code, status.HTTP_200_OK)
+        self.assertEqual(valid_update.data['limit'], '1500.00')
+
+    def test_ownership_for_resolve_retrieve_update(self):
+        other_wallet = Wallet.objects.create(
+            user=self.other_user,
+            name='Other Wallet',
+            limit=Decimal('3000.00'),
+            cycle_limit_default=Decimal('1200.00'),
+            cycle_starts=1,
+            cycle_ends=30,
+        )
+
+        forbidden_resolve = self.resolve_by_date(other_wallet.id, '2026-02-10')
+        self.assertEqual(forbidden_resolve.status_code, status.HTTP_404_NOT_FOUND)
+
+        other_cycle = ExpenseCycle.objects.create(
+            wallet=other_wallet,
+            month='2026-02-01',
+            limit=Decimal('1200.00'),
+            start_date='2026-02-01',
+            end_date='2026-02-28',
+        )
+
+        retrieve = self.client.get(f'/api/v1/wallets/cycle/{other_cycle.id}/')
+        self.assertEqual(retrieve.status_code, status.HTTP_404_NOT_FOUND)
+
+        update = self.client.patch(
+            f'/api/v1/wallets/cycle/{other_cycle.id}/',
+            {'limit': '1000.00'},
+            format='json',
+        )
+        self.assertEqual(update.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unique_constraint_wallet_month(self):
+        self.create_cycle(wallet=self.wallet)
+
+        with self.assertRaises(IntegrityError):
+            self.create_cycle(
+                wallet=self.wallet,
+                month='2026-02-01',
+            )
+
+    def test_list_requires_wallet_query_param(self):
+        self.create_cycle(wallet=self.wallet)
+
+        response = self.client.get('/api/v1/wallets/cycle/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The 'wallet' query parameter is required.", str(response.data['wallet']))
+
+    def test_list_cycles_by_wallet_only(self):
+        other_wallet_same_user = Wallet.objects.create(
+            user=self.user,
+            name='Second Wallet',
+            limit=Decimal('4500.00'),
+            cycle_limit_default=Decimal('2200.00'),
+            cycle_starts=5,
+            cycle_ends=20,
+        )
+        target_cycle = self.create_cycle(wallet=self.wallet, month='2026-02-01')
+        self.create_cycle(
+            wallet=other_wallet_same_user,
+            month='2026-03-01',
+            start_date='2026-03-05',
+            end_date='2026-03-20',
+        )
+
+        response = self.client.get(f'/api/v1/wallets/cycle/?wallet={self.wallet.id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['id'], str(target_cycle.id))
+
+    def test_list_cycles_returns_404_for_other_user_wallet(self):
+        other_wallet = Wallet.objects.create(
+            user=self.other_user,
+            name='Other Wallet List',
+            limit=Decimal('3000.00'),
+            cycle_limit_default=Decimal('1500.00'),
+            cycle_starts=1,
+            cycle_ends=30,
+        )
+
+        response = self.client.get(f'/api/v1/wallets/cycle/?wallet={other_wallet.id}')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
