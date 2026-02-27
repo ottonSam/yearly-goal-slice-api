@@ -1,5 +1,6 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from django.utils.decorators import method_decorator
 from rest_framework import filters, permissions, viewsets
 
 from wallets.models import ExpenseCategory
@@ -18,6 +19,27 @@ EXPENSE_CATEGORY_PATCH_EXAMPLE = {
 }
 
 
+@method_decorator(
+    name='list',
+    decorator=swagger_auto_schema(
+        operation_summary='List expense categories',
+        tags=['Wallet Expense Categories'],
+    ),
+)
+@method_decorator(
+    name='retrieve',
+    decorator=swagger_auto_schema(
+        operation_summary='Retrieve expense category',
+        tags=['Wallet Expense Categories'],
+    ),
+)
+@method_decorator(
+    name='update',
+    decorator=swagger_auto_schema(
+        operation_summary='Update expense category',
+        tags=['Wallet Expense Categories'],
+    ),
+)
 class ExpenseCategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]

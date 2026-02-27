@@ -1,5 +1,6 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from django.utils.decorators import method_decorator
 from rest_framework import filters, permissions, viewsets
 
 from wallets.models import Wallet
@@ -22,6 +23,27 @@ WALLET_PATCH_EXAMPLE = {
 }
 
 
+@method_decorator(
+    name='list',
+    decorator=swagger_auto_schema(
+        operation_summary='List wallets',
+        tags=['Wallets'],
+    ),
+)
+@method_decorator(
+    name='retrieve',
+    decorator=swagger_auto_schema(
+        operation_summary='Retrieve wallet',
+        tags=['Wallets'],
+    ),
+)
+@method_decorator(
+    name='update',
+    decorator=swagger_auto_schema(
+        operation_summary='Update wallet',
+        tags=['Wallets'],
+    ),
+)
 class WalletViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsOwner]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]

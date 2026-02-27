@@ -2,10 +2,11 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.urls import Resolver404, resolve
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import ExpenseCategory, ExpenseCycle, Wallet
+from .models import Expense, ExpenseCategory, ExpenseCycle, InstallmentSerie, Wallet
 
 
 User = get_user_model()
@@ -465,3 +466,254 @@ class ExpenseCycleAPITests(APITestCase):
 
         response = self.client.get(f'/api/v1/wallets/cycle/?wallet={other_wallet.id}')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_retrieve_cycle_includes_expenses_but_list_does_not(self):
+        cycle = self.create_cycle(wallet=self.wallet)
+        category = ExpenseCategory.objects.create(
+            user=self.user,
+            name='Food',
+            icon='mdi:food',
+            color='#FF6B00',
+        )
+        expense = Expense.objects.create(
+            expense_cycle=cycle,
+            expense_category=category,
+            description='Groceries',
+            amount=Decimal('150.00'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-02-26',
+        )
+
+        retrieve_response = self.client.get(f'/api/v1/wallets/cycle/{cycle.id}/')
+        self.assertEqual(retrieve_response.status_code, status.HTTP_200_OK)
+        self.assertIn('expenses', retrieve_response.data)
+        self.assertEqual(len(retrieve_response.data['expenses']), 1)
+        self.assertEqual(retrieve_response.data['expenses'][0]['id'], str(expense.id))
+
+        list_response = self.client.get(f'/api/v1/wallets/cycle/?wallet={self.wallet.id}')
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+        self.assertNotIn('expenses', list_response.data[0])
+
+
+class ExpenseAndInstallmentRulesAPITests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='expense_owner',
+            email='expense_owner@example.com',
+            password='StrongPass123!',
+            first_name='Expense',
+            last_name='Owner',
+            email_verified=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        self.wallet = Wallet.objects.create(
+            user=self.user,
+            name='Wallet Rules',
+            limit=Decimal('10000.00'),
+            cycle_limit_default=Decimal('3000.00'),
+            cycle_starts=1,
+            cycle_ends=30,
+        )
+        self.category_a = ExpenseCategory.objects.create(
+            user=self.user,
+            name='Categoria A',
+            icon='mdi:alpha-a-box',
+            color='#111111',
+        )
+        self.category_b = ExpenseCategory.objects.create(
+            user=self.user,
+            name='Categoria B',
+            icon='mdi:alpha-b-box',
+            color='#222222',
+        )
+        self.cycle_feb = ExpenseCycle.objects.create(
+            wallet=self.wallet,
+            month='2026-02-01',
+            limit=Decimal('3000.00'),
+            start_date='2026-02-01',
+            end_date='2026-02-28',
+        )
+        self.cycle_mar = ExpenseCycle.objects.create(
+            wallet=self.wallet,
+            month='2026-03-01',
+            limit=Decimal('3000.00'),
+            start_date='2026-03-01',
+            end_date='2026-03-30',
+        )
+        self.cycle_apr = ExpenseCycle.objects.create(
+            wallet=self.wallet,
+            month='2026-04-01',
+            limit=Decimal('3000.00'),
+            start_date='2026-04-01',
+            end_date='2026-04-30',
+        )
+
+    def test_create_single_expense(self):
+        response = self.client.post(
+            '/api/v1/wallets/expenses/',
+            {
+                'expense_cycle': str(self.cycle_feb.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Mercado',
+                'amount': '150.00',
+                'type': 'single_expense',
+                'date': '2026-02-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Expense.objects.count(), 1)
+        expense = Expense.objects.first()
+        self.assertEqual(expense.type, Expense.TYPE_SINGLE)
+        self.assertEqual(expense.amount, Decimal('150.00'))
+
+    def test_list_expenses_requires_cycle_query_param(self):
+        response = self.client.get('/api/v1/wallets/expenses/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The 'expense_cycle' query parameter is required.", str(response.data['expense_cycle']))
+
+    def test_create_recurring_expense(self):
+        response = self.client.post(
+            '/api/v1/wallets/expenses/',
+            {
+                'expense_cycle': str(self.cycle_feb.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Academia',
+                'amount': '99.90',
+                'type': 'recurring_expense',
+                'date': '2026-02-05',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        recurring = Expense.objects.filter(type=Expense.TYPE_RECURRING)
+        self.assertEqual(recurring.count(), 3)
+        self.assertTrue(recurring.filter(expense_cycle=self.cycle_feb, recurring_root__isnull=True).exists())
+        self.assertTrue(recurring.filter(expense_cycle=self.cycle_mar).exists())
+        self.assertTrue(recurring.filter(expense_cycle=self.cycle_apr).exists())
+
+    def test_list_expenses_filters_by_cycle(self):
+        feb_expense = Expense.objects.create(
+            expense_cycle=self.cycle_feb,
+            expense_category=self.category_a,
+            description='Mercado Fevereiro',
+            amount=Decimal('49.90'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-02-03',
+        )
+        mar_expense = Expense.objects.create(
+            expense_cycle=self.cycle_mar,
+            expense_category=self.category_a,
+            description='Mercado Marco',
+            amount=Decimal('59.90'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-03-03',
+        )
+
+        feb_response = self.client.get(f'/api/v1/wallets/expenses/?expense_cycle={self.cycle_feb.id}')
+        self.assertEqual(feb_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(feb_response.data), 1)
+        self.assertEqual(feb_response.data[0]['id'], str(feb_expense.id))
+
+        mar_response = self.client.get(f'/api/v1/wallets/expenses/?expense_cycle={self.cycle_mar.id}')
+        self.assertEqual(mar_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mar_response.data), 1)
+        self.assertEqual(mar_response.data[0]['id'], str(mar_expense.id))
+
+    def test_expense_detail_endpoint_is_not_available(self):
+        expense = Expense.objects.create(
+            expense_cycle=self.cycle_feb,
+            expense_category=self.category_a,
+            description='Mercado',
+            amount=Decimal('150.00'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-02-10',
+        )
+
+        with self.assertRaises(Resolver404):
+            resolve(f'/api/v1/wallets/expenses/{expense.id}/')
+
+    def test_create_installment_serie_generates_expenses(self):
+        response = self.client.post(
+            '/api/v1/wallets/installment-series/',
+            {
+                'wallet': str(self.wallet.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Notebook',
+                'total_amount': '1000.00',
+                'installments_count': 4,
+                'start_date': '2026-02-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        serie = InstallmentSerie.objects.get(id=response.data['id'])
+        generated = Expense.objects.filter(installment_serie=serie, type=Expense.TYPE_INSTALLMENT).order_by('date')
+        self.assertEqual(generated.count(), 4)
+        self.assertEqual(sum((expense.amount for expense in generated), Decimal('0.00')), Decimal('1000.00'))
+        self.assertEqual(generated.first().date.isoformat(), '2026-02-10')
+        self.assertEqual(generated.last().date.isoformat(), '2026-05-10')
+
+    def test_edit_installment_serie_updates_generated_expenses(self):
+        serie = InstallmentSerie.objects.create(
+            wallet=self.wallet,
+            expense_category=self.category_a,
+            description='Curso',
+            total_amount=Decimal('300.00'),
+            installments_count=3,
+            start_date='2026-02-08',
+        )
+        Expense.objects.create(
+            expense_cycle=self.cycle_feb,
+            expense_category=self.category_a,
+            installment_serie=serie,
+            description='Curso',
+            amount=Decimal('100.00'),
+            type=Expense.TYPE_INSTALLMENT,
+            date='2026-02-08',
+        )
+
+        response = self.client.put(
+            f'/api/v1/wallets/installment-series/{serie.id}/',
+            {
+                'wallet': str(self.wallet.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Curso atualizado',
+                'total_amount': '600.00',
+                'installments_count': 2,
+                'start_date': '2026-02-08',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        serie.refresh_from_db()
+        generated = Expense.objects.filter(installment_serie=serie).order_by('date')
+        self.assertEqual(generated.count(), 2)
+        self.assertEqual(sum((expense.amount for expense in generated), Decimal('0.00')), Decimal('600.00'))
+        self.assertTrue(all(expense.description == 'Curso atualizado' for expense in generated))
+
+    def test_installment_series_allows_only_post_put_delete(self):
+        serie = InstallmentSerie.objects.create(
+            wallet=self.wallet,
+            expense_category=self.category_a,
+            description='Curso',
+            total_amount=Decimal('300.00'),
+            installments_count=3,
+            start_date='2026-02-08',
+        )
+
+        list_response = self.client.get('/api/v1/wallets/installment-series/')
+        self.assertEqual(list_response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        retrieve_response = self.client.get(f'/api/v1/wallets/installment-series/{serie.id}/')
+        self.assertEqual(retrieve_response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        patch_response = self.client.patch(
+            f'/api/v1/wallets/installment-series/{serie.id}/',
+            {'description': 'Nao deve atualizar por patch'},
+            format='json',
+        )
+        self.assertEqual(patch_response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)

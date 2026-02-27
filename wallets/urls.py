@@ -1,11 +1,24 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import ExpenseCategoryViewSet, ExpenseCycleViewSet, WalletViewSet
+from .views import (
+    ExpenseCategoryViewSet,
+    ExpenseCycleViewSet,
+    ExpenseViewSet,
+    InstallmentSerieViewSet,
+    WalletViewSet,
+)
 
 
 router = DefaultRouter()
 router.register('wallets/cycle', ExpenseCycleViewSet, basename='wallet-expense-cycle')
 router.register('wallets/categories', ExpenseCategoryViewSet, basename='wallet-expense-category')
+router.register('wallets/installment-series', InstallmentSerieViewSet, basename='wallet-installment-serie')
 router.register('wallets', WalletViewSet, basename='wallet')
 
-urlpatterns = router.urls
+expense_list_create_view = ExpenseViewSet.as_view({'get': 'list', 'post': 'create'})
+
+urlpatterns = [
+    path('wallets/expenses/', expense_list_create_view, name='wallet-expense-list-create'),
+]
+urlpatterns += router.urls

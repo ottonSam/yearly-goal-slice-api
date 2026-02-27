@@ -14,6 +14,9 @@ class IsOwner(BasePermission):
         wallet = getattr(obj, 'wallet', None)
         if wallet is not None:
             return wallet.user == request.user
+        expense_cycle = getattr(obj, 'expense_cycle', None)
+        if expense_cycle is not None:
+            return expense_cycle.wallet.user == request.user
         return False
 
 

@@ -4,6 +4,8 @@ from rest_framework import serializers
 
 from wallets.models import ExpenseCycle
 
+from .expense import ExpenseReadSerializer
+
 
 class ExpenseCycleReadSerializer(serializers.ModelSerializer):
     wallet = serializers.UUIDField(read_only=True, source='wallet_id', help_text='Related wallet ID.')
@@ -20,6 +22,14 @@ class ExpenseCycleReadSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         )
+        read_only_fields = fields
+
+
+class ExpenseCycleDetailSerializer(ExpenseCycleReadSerializer):
+    expenses = ExpenseReadSerializer(many=True, read_only=True)
+
+    class Meta(ExpenseCycleReadSerializer.Meta):
+        fields = ExpenseCycleReadSerializer.Meta.fields + ('expenses',)
         read_only_fields = fields
 
 

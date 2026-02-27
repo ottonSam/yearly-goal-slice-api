@@ -1,6 +1,7 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -9,11 +10,13 @@ from rest_framework.response import Response
 from wallets.models import ExpenseCycle, Wallet
 from wallets.permissions import IsOwner
 from wallets.serializers import (
+    ExpenseCycleDetailSerializer,
     ExpenseCycleReadSerializer,
     ExpenseCycleResolveSerializer,
     ExpenseCycleUpdateSerializer,
 )
 from wallets.services.expense_cycle import compute_cycle_for_date, compute_cycle_for_month
+from wallets.services.expense import materialize_recurring_expenses_for_cycle
 
 
 EXPENSE_CYCLE_RESOLVE_BY_DATE_EXAMPLE = {
@@ -31,6 +34,14 @@ EXPENSE_CYCLE_UPDATE_EXAMPLE = {
 }
 
 
+@method_decorator(
+    name='retrieve',
+    decorator=swagger_auto_schema(
+        operation_summary='Retrieve expense cycle',
+        responses={200: ExpenseCycleDetailSerializer},
+        tags=['Wallet Expense Cycles'],
+    ),
+)
 class ExpenseCycleViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -44,9 +55,14 @@ class ExpenseCycleViewSet(
     search_fields = ['month']
 
     def get_queryset(self):
-        return ExpenseCycle.objects.filter(wallet__user=self.request.user).select_related('wallet')
+        queryset = ExpenseCycle.objects.filter(wallet__user=self.request.user).select_related('wallet')
+        if self.action == 'retrieve':
+            queryset = queryset.prefetch_related('expenses')
+        return queryset
 
     def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ExpenseCycleDetailSerializer
         if self.action == 'resolve':
             return ExpenseCycleResolveSerializer
         if self.action in {'update', 'partial_update'}:
@@ -103,6 +119,7 @@ class ExpenseCycleViewSet(
                 'end_date': end_date,
             },
         )
+        materialize_recurring_expenses_for_cycle(cycle)
 
         response_data = {
             'created': created,
@@ -154,6 +171,10 @@ class ExpenseCycleViewSet(
         serializer.save()
         return Response(ExpenseCycleReadSerializer(instance).data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        operation_summary='List expense cycles',
+        tags=['Wallet Expense Cycles'],
+    )
     def list(self, request, *args, **kwargs):
         wallet_id = request.query_params.get('wallet')
         if not wallet_id:

@@ -1,7 +1,7 @@
 @baseUrl = http://localhost:8000/api/v1
-@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MjE2NDQxOCwiaWF0IjoxNzcyMDc4MDE4LCJqdGkiOiI1ZDU1MTExZGZkMmI0ZmNjOGQxNmI3ZWJiYWVkNWNjYiIsInVzZXJfaWQiOiIyOTZiNmMwYi0wMDE3LTQxZDYtODFjYy1lYzlkOWI2YmI4YzIifQ.WoUP4IPxyFZIghpcgnjaTLpDdnQSdQd8MDwdQUJ4_6E
+@refresh = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MjI0NjY1NywiaWF0IjoxNzcyMTYwMjU3LCJqdGkiOiI4Mzg2ODQyNjFjYmE0MWVjYTk4NjkzYzQ1OTQ3NDc1OSIsInVzZXJfaWQiOiIyOTZiNmMwYi0wMDE3LTQxZDYtODFjYy1lYzlkOWI2YmI4YzIifQ.StSPsvEwRTvsHmZ2ouRyWhZG9adCRGfASp9e1d5DbD8
 
-@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMDgwODQ0LCJpYXQiOjE3NzIwNzgwMTgsImp0aSI6Ijk3YjlhNzAxOWFjMDRmOTI4YjVlYTljMjM4NDU3YTlkIiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.d8e4PMPi3p3wBts-9WQ3P3tvsF9U_GUG-8hbzmLXHNM
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMTYxMTU3LCJpYXQiOjE3NzIxNjAyNTcsImp0aSI6ImM5OTA2ODFkNGQ5NjQ0MjRhNjI0OGUyYThhZDdlOTI4IiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.aIuuntRXzGoDnrRF2Iu5TN2rXkXfAb1apW13Y06KGRg
 
 @weekId = 8e2fe807-676e-48e6-9bb6-827268a67b5e
 @objectiveId = 4f2c127a-4745-46d2-a8e1-7cb0ba1861d3
@@ -12,6 +12,9 @@
 @walletId = 8aaa2cd6-1877-4f45-925c-17dbc9908671
 @expenseCategoryId = 8d8c7c36-6af7-4ddf-ac66-d7af229b42c8
 @expenseCycleId = 00000000-0000-0000-0000-000000000000
+@installmentSerieId = 78b8d3f0-9efc-4f75-9efe-d24f6dbd0b22
+@expenseId = 00000000-0000-0000-0000-000000000000
+@recurringExpenseId = 00000000-0000-0000-0000-000000000000
 ##### Authentication and User Management
 ### Register
 POST {{baseUrl}}/auth/register/
@@ -429,3 +432,101 @@ Content-Type: application/json
 {
   "limit": "1800.00"
 }
+
+
+##### Wallet Installment Series
+### Create installment series (creates installment expenses automatically)
+POST {{baseUrl}}/wallets/installment-series/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "wallet": "{{walletId}}",
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Notebook",
+  "total_amount": "2400.00",
+  "installments_count": 4,
+  "start_date": "2026-03-10"
+}
+
+### List installment series
+GET {{baseUrl}}/wallets/installment-series/
+Authorization: Bearer {{access}}
+
+### Installment series detail (set {{installmentSerieId}} from create response)
+GET {{baseUrl}}/wallets/installment-series/{{installmentSerieId}}/
+Authorization: Bearer {{access}}
+
+### Patch installment series (regenerates related installment expenses)
+PATCH {{baseUrl}}/wallets/installment-series/{{installmentSerieId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "description": "Notebook atualizado",
+  "total_amount": "2200.00",
+  "installments_count": 10
+}
+
+### Delete installment series
+DELETE {{baseUrl}}/wallets/installment-series/{{installmentSerieId}}/
+Authorization: Bearer {{access}}
+
+
+##### Wallet Expenses
+### Create single expense
+POST {{baseUrl}}/wallets/expenses/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "expense_cycle": "{{expenseCycleId}}",
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Mercado",
+  "amount": "150.00",
+  "type": "single_expense",
+  "date": "2026-03-05"
+}
+
+### Edit single expense (only category and/or amount)
+PATCH {{baseUrl}}/wallets/expenses/{{expenseId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "expense_category": "{{expenseCategoryId}}",
+  "amount": "180.00"
+}
+
+### Create recurring expense
+POST {{baseUrl}}/wallets/expenses/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "expense_cycle": "{{expenseCycleId}}",
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Academia",
+  "amount": "99.90",
+  "type": "recurring_expense",
+  "date": "2026-03-07"
+}
+
+### Cancel recurring expense from current cycle onward (set {{recurringExpenseId}})
+POST {{baseUrl}}/wallets/expenses/{{recurringExpenseId}}/cancel-recurring/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{}
+
+### List expenses (optionally filter by cycle)
+GET {{baseUrl}}/wallets/expenses/?expense_cycle={{expenseCycleId}}
+Authorization: Bearer {{access}}
+
+### Expense detail
+GET {{baseUrl}}/wallets/expenses/{{expenseId}}/
+Authorization: Bearer {{access}}
+
+### Delete single expense
+DELETE {{baseUrl}}/wallets/expenses/{{expenseId}}/
+Authorization: Bearer {{access}}
