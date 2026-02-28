@@ -1,9 +1,9 @@
 @rootUrl = http://localhost:8000
 @baseUrl = {{rootUrl}}/api/v1
 
-@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMjQ3MDc4LCJpYXQiOjE3NzIyNDYxNzgsImp0aSI6ImNjZTdkZGM1YmQ5MDQxM2RhYzZhYTU0MjU5ZjI3MmViIiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.3N5QXOx7gHsw35paaqpmaeYw4-TCD36xVVpFFU7JTvs
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMjkzMDc5LCJpYXQiOjE3NzIyOTIxNzksImp0aSI6ImNlMThmNmYwY2U0YzQxM2Q4ZDRiYmNmN2Y1MjYwOGM1IiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.76TCDHKP8y_DPQbD3dAQetokNvxDoLFiFc4gK4mcWl0
 @walletId = 98b8b431-285b-41ff-bf5a-d4fbb3c0be90
-@expenseCycleId = 4fa6e349-6bd4-4472-a523-e101dd4fdf5f
+@expenseCycleId = 2c5e5d9c-54f1-424b-be07-776f7cee6e6a
 
 
 ### Resolve cycle by date (create if missing)
@@ -32,6 +32,10 @@ Authorization: Bearer {{access}}
 
 ### Expense cycle detail
 GET {{baseUrl}}/wallets/cycle/{{expenseCycleId}}/
+Authorization: Bearer {{access}}
+
+### Expense cycle billing summary
+GET {{baseUrl}}/wallets/cycle/{{expenseCycleId}}/billing-summary/
 Authorization: Bearer {{access}}
 
 ### Update expense cycle limit (PUT)
