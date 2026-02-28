@@ -2,6 +2,8 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import F
+from django.db.models.functions import Lower
 
 
 class ExpenseCategory(models.Model):
@@ -21,8 +23,9 @@ class ExpenseCategory(models.Model):
         ordering = ['name']
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'name'],
-                name='unique_expense_category_user_name',
+                F('user'),
+                Lower('name'),
+                name='unique_expense_category_user_name_ci',
             ),
         ]
 

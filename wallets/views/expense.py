@@ -1,13 +1,14 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from wallets.models import Expense
 from wallets.permissions import IsOwner
-from wallets.serializers import ExpenseCreateSerializer, ExpenseReadSerializer
-from wallets.services.expense import sync_recurring_expense_to_existing_cycles
+from wallets.serializers import ExpenseCreateSerializer, ExpenseReadSerializer, ExpenseSingleUpdateSerializer
+from wallets.services.expense import cancel_recurring_from, sync_recurring_expense_to_existing_cycles
 
 
 EXPENSE_CREATE_SINGLE_EXAMPLE = {
@@ -26,6 +27,13 @@ EXPENSE_CREATE_RECURRING_EXAMPLE = {
     'amount': '99.90',
     'type': 'recurring_expense',
     'date': '2026-03-05',
+}
+
+EXPENSE_SINGLE_UPDATE_EXAMPLE = {
+    'expense_category': '00000000-0000-0000-0000-000000000000',
+    'amount': '180.00',
+    'description': 'Mercado mensal atualizado',
+    'date': '2026-03-28',
 }
 
 class ExpenseViewSet(
@@ -50,6 +58,8 @@ class ExpenseViewSet(
     def get_serializer_class(self):
         if self.action == 'create':
             return ExpenseCreateSerializer
+        if self.action == 'update_single':
+            return ExpenseSingleUpdateSerializer
         return ExpenseReadSerializer
 
     @swagger_auto_schema(
@@ -115,3 +125,59 @@ class ExpenseViewSet(
         expense = serializer.save()
         if expense.type == Expense.TYPE_RECURRING:
             sync_recurring_expense_to_existing_cycles(expense)
+
+    @swagger_auto_schema(
+        operation_summary='Update single expense',
+        operation_description=(
+            "Partially updates a single expense. Only 'expense_category', 'amount', "
+            "'description' and/or 'date' are allowed."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'expense_category': openapi.Schema(type=openapi.TYPE_STRING, format='uuid'),
+                'amount': openapi.Schema(type=openapi.TYPE_STRING, description='Decimal with 2 fraction digits'),
+                'description': openapi.Schema(type=openapi.TYPE_STRING, max_length=120),
+                'date': openapi.Schema(type=openapi.TYPE_STRING, format='date'),
+            },
+            example=EXPENSE_SINGLE_UPDATE_EXAMPLE,
+        ),
+        responses={200: ExpenseReadSerializer},
+        tags=['Wallet Expenses'],
+    )
+    def update_single(self, request, pk=None, *args, **kwargs):
+        expense = get_object_or_404(self.get_queryset(), pk=pk)
+        serializer = self.get_serializer(expense, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(ExpenseReadSerializer(expense).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary='Cancel recurring expense series',
+        operation_description='Deletes the recurring expense root (past cycle) and all recurring expenses from that cycle onward.',
+        request_body=None,
+        responses={
+            200: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'detail': openapi.Schema(type=openapi.TYPE_STRING),
+                    'deleted_count': openapi.Schema(type=openapi.TYPE_INTEGER),
+                },
+            )
+        },
+        tags=['Wallet Expenses'],
+    )
+    def cancel_recurring(self, request, pk=None, *args, **kwargs):
+        expense = get_object_or_404(self.get_queryset(), pk=pk)
+        if expense.type != Expense.TYPE_RECURRING:
+            raise ValidationError({'detail': "Only recurring expenses can be canceled."})
+
+        root = expense if expense.recurring_root_id is None else expense.recurring_root
+        deleted_count = cancel_recurring_from(root)
+        return Response(
+            {
+                'detail': 'Recurring expense series canceled successfully.',
+                'deleted_count': deleted_count,
+            },
+            status=status.HTTP_200_OK,
+        )

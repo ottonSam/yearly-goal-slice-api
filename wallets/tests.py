@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
-from django.urls import Resolver404, resolve
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -263,6 +263,22 @@ class ExpenseCategoryAPITests(APITestCase):
             format='json',
         )
         self.assertEqual(allowed.status_code, status.HTTP_201_CREATED)
+
+    def test_db_constraint_rejects_case_insensitive_duplicate_name_for_same_user(self):
+        ExpenseCategory.objects.create(
+            user=self.user,
+            name='Health',
+            icon='mdi:heart',
+            color='#AA0000',
+        )
+
+        with self.assertRaises(IntegrityError):
+            ExpenseCategory.objects.create(
+                user=self.user,
+                name='health',
+                icon='mdi:heart-outline',
+                color='#BB0000',
+            )
 
     def test_icon_and_color_are_required(self):
         missing_fields = self.client.post(
@@ -593,6 +609,89 @@ class ExpenseAndInstallmentRulesAPITests(APITestCase):
         self.assertTrue(recurring.filter(expense_cycle=self.cycle_mar).exists())
         self.assertTrue(recurring.filter(expense_cycle=self.cycle_apr).exists())
 
+    def test_cancel_recurring_deletes_past_cycle_and_forward(self):
+        create_response = self.client.post(
+            '/api/v1/wallets/expenses/',
+            {
+                'expense_cycle': str(self.cycle_feb.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Academia',
+                'amount': '99.90',
+                'type': 'recurring_expense',
+                'date': '2026-02-05',
+            },
+            format='json',
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        root_id = create_response.data['id']
+        march_occurrence = Expense.objects.get(
+            expense_cycle=self.cycle_mar,
+            recurring_root_id=root_id,
+            type=Expense.TYPE_RECURRING,
+        )
+
+        cancel_response = self.client.post(
+            f'/api/v1/wallets/expenses/{march_occurrence.id}/cancel-recurring/',
+            format='json',
+        )
+        self.assertEqual(cancel_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(cancel_response.data['deleted_count'], 3)
+        self.assertFalse(
+            Expense.objects.filter(
+                Q(id=root_id) | Q(recurring_root_id=root_id),
+                type=Expense.TYPE_RECURRING,
+            ).exists()
+        )
+
+    def test_cancel_recurring_rejects_non_recurring_expense(self):
+        single_expense = Expense.objects.create(
+            expense_cycle=self.cycle_feb,
+            expense_category=self.category_a,
+            description='Mercado',
+            amount=Decimal('49.90'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-02-03',
+        )
+
+        response = self.client.post(
+            f'/api/v1/wallets/expenses/{single_expense.id}/cancel-recurring/',
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', response.data)
+
+    def test_create_expense_allows_date_outside_cycle_end_within_one_month_from_start(self):
+        response = self.client.post(
+            '/api/v1/wallets/expenses/',
+            {
+                'expense_cycle': str(self.cycle_mar.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Despesa fim do mes',
+                'amount': '80.00',
+                'type': 'single_expense',
+                'date': '2026-03-31',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['date'], '2026-03-31')
+
+    def test_create_expense_rejects_date_before_cycle_start(self):
+        response = self.client.post(
+            '/api/v1/wallets/expenses/',
+            {
+                'expense_cycle': str(self.cycle_mar.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Despesa fora da janela',
+                'amount': '80.00',
+                'type': 'single_expense',
+                'date': '2026-02-28',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('date', response.data)
+
     def test_list_expenses_filters_by_cycle(self):
         feb_expense = Expense.objects.create(
             expense_cycle=self.cycle_feb,
@@ -621,7 +720,7 @@ class ExpenseAndInstallmentRulesAPITests(APITestCase):
         self.assertEqual(len(mar_response.data), 1)
         self.assertEqual(mar_response.data[0]['id'], str(mar_expense.id))
 
-    def test_expense_detail_endpoint_is_not_available(self):
+    def test_update_single_expense_allows_amount_category_date_and_description(self):
         expense = Expense.objects.create(
             expense_cycle=self.cycle_feb,
             expense_category=self.category_a,
@@ -631,8 +730,63 @@ class ExpenseAndInstallmentRulesAPITests(APITestCase):
             date='2026-02-10',
         )
 
-        with self.assertRaises(Resolver404):
-            resolve(f'/api/v1/wallets/expenses/{expense.id}/')
+        response = self.client.patch(
+            f'/api/v1/wallets/expenses/{expense.id}/',
+            {
+                'expense_category': str(self.category_b.id),
+                'amount': '180.00',
+                'description': 'Mercado atualizado',
+                'date': '2026-02-15',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        expense.refresh_from_db()
+        self.assertEqual(expense.expense_category_id, self.category_b.id)
+        self.assertEqual(expense.amount, Decimal('180.00'))
+        self.assertEqual(expense.description, 'Mercado atualizado')
+        self.assertEqual(expense.date.isoformat(), '2026-02-15')
+
+    def test_update_single_expense_rejects_recurring_expense(self):
+        create_response = self.client.post(
+            '/api/v1/wallets/expenses/',
+            {
+                'expense_cycle': str(self.cycle_feb.id),
+                'expense_category': str(self.category_a.id),
+                'description': 'Academia',
+                'amount': '99.90',
+                'type': 'recurring_expense',
+                'date': '2026-02-05',
+            },
+            format='json',
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.patch(
+            f"/api/v1/wallets/expenses/{create_response.data['id']}/",
+            {'amount': '120.00'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('non_field_errors', response.data)
+
+    def test_update_single_expense_rejects_date_outside_cycle_window(self):
+        expense = Expense.objects.create(
+            expense_cycle=self.cycle_feb,
+            expense_category=self.category_a,
+            description='Mercado',
+            amount=Decimal('150.00'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-02-10',
+        )
+
+        response = self.client.patch(
+            f'/api/v1/wallets/expenses/{expense.id}/',
+            {'date': '2026-03-01'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('date', response.data)
 
     def test_create_installment_serie_generates_expenses(self):
         response = self.client.post(

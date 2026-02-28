@@ -1,0 +1,83 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@username = exampleuser
+@email = exampleuser@email.com
+@password = Teste123!@
+@newPassword = NovoTeste123!@
+@verificationCode = 000000
+
+@access = REPLACE_WITH_ACCESS_TOKEN
+@refresh = REPLACE_WITH_REFRESH_TOKEN
+
+
+### Register
+POST {{baseUrl}}/auth/register/
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "first_name": "Example",
+  "last_name": "User"
+}
+
+### Verify email
+POST {{baseUrl}}/auth/verify-email/
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "code": "{{verificationCode}}"
+}
+
+### Login (requires email already verified)
+POST {{baseUrl}}/auth/login/
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### Refresh access token
+POST {{baseUrl}}/auth/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "{{refresh}}"
+}
+
+### Me
+GET {{baseUrl}}/auth/me/
+Authorization: Bearer {{access}}
+
+### Update profile (PUT)
+PUT {{baseUrl}}/auth/update-profile/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "first_name": "ExampleUpdated",
+  "last_name": "UserUpdated"
+}
+
+### Update profile (PATCH)
+PATCH {{baseUrl}}/auth/update-profile/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "first_name": "ExamplePatched"
+}
+
+### Change password
+POST {{baseUrl}}/auth/change-password/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "current_password": "{{password}}",
+  "new_password": "{{newPassword}}"
+}

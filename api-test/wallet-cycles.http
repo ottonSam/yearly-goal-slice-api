@@ -1,0 +1,53 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMjQ3MDc4LCJpYXQiOjE3NzIyNDYxNzgsImp0aSI6ImNjZTdkZGM1YmQ5MDQxM2RhYzZhYTU0MjU5ZjI3MmViIiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.3N5QXOx7gHsw35paaqpmaeYw4-TCD36xVVpFFU7JTvs
+@walletId = 98b8b431-285b-41ff-bf5a-d4fbb3c0be90
+@expenseCycleId = 4fa6e349-6bd4-4472-a523-e101dd4fdf5f
+
+
+### Resolve cycle by date (create if missing)
+POST {{baseUrl}}/wallets/cycle/resolve/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "wallet": "{{walletId}}",
+  "date": "2026-03-10"
+}
+
+### Resolve cycle by month (create if missing)
+POST {{baseUrl}}/wallets/cycle/resolve/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "wallet": "{{walletId}}",
+  "month": "2026-03"
+}
+
+### List expense cycles by wallet (query param required)
+GET {{baseUrl}}/wallets/cycle/?wallet={{walletId}}
+Authorization: Bearer {{access}}
+
+### Expense cycle detail
+GET {{baseUrl}}/wallets/cycle/{{expenseCycleId}}/
+Authorization: Bearer {{access}}
+
+### Update expense cycle limit (PUT)
+PUT {{baseUrl}}/wallets/cycle/{{expenseCycleId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "limit": "1800.00"
+}
+
+### Update expense cycle limit (PATCH)
+PATCH {{baseUrl}}/wallets/cycle/{{expenseCycleId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "limit": "1500.00"
+}

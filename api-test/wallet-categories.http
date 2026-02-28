@@ -1,0 +1,49 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMjQ2MTM2LCJpYXQiOjE3NzIyNDUyMzYsImp0aSI6IjU4YjUwNjc3MDQ2YzRmNjRhMWYwZGI3OTIxN2IyNzQ0IiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.NHW5EaeaPoS21A5w8-CI_IGGNTIlX8SfK4pS655eQ7I
+@expenseCategoryId = 8d8c7c36-6af7-4ddf-ac66-d7af229b42c8
+
+
+### Create expense category
+POST {{baseUrl}}/wallets/categories/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "name": "Alimentacao",
+  "icon": "mdi:food",
+  "color": "#FF6B00"
+}
+
+### List expense categories
+GET {{baseUrl}}/wallets/categories/
+Authorization: Bearer {{access}}
+
+### Expense category detail
+GET {{baseUrl}}/wallets/categories/{{expenseCategoryId}}/
+Authorization: Bearer {{access}}
+
+### Update expense category (PUT)
+PUT {{baseUrl}}/wallets/categories/{{expenseCategoryId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "name": "Saude",
+  "icon": "mdi:food-apple",
+  "color": "#00C2FF"
+}
+
+### Update expense category (PATCH)
+PATCH {{baseUrl}}/wallets/categories/{{expenseCategoryId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "color": "#00C2FF"
+}
+
+### Delete expense category
+DELETE {{baseUrl}}/wallets/categories/{{expenseCategoryId}}/
+Authorization: Bearer {{access}}

@@ -1,6 +1,16 @@
+from calendar import monthrange
+from datetime import date
+
 from rest_framework import serializers
 
 from wallets.models import Expense, ExpenseCategory, ExpenseCycle
+
+
+def _add_one_month(base_date: date) -> date:
+    year = base_date.year + (base_date.month // 12)
+    month = (base_date.month % 12) + 1
+    day = min(base_date.day, monthrange(year, month)[1])
+    return date(year, month, day)
 
 
 class ExpenseReadSerializer(serializers.ModelSerializer):
@@ -81,8 +91,12 @@ class ExpenseCreateSerializer(serializers.ModelSerializer):
                 {'expense_category': 'Expense category must belong to the same wallet owner.'}
             )
 
-        if not (cycle.start_date <= expense_date <= cycle.end_date):
-            raise serializers.ValidationError({'date': 'Date must be inside expense cycle period.'})
+        cycle_start = cycle.start_date
+        cycle_next_month_start = _add_one_month(cycle_start)
+        if not (cycle_start <= expense_date < cycle_next_month_start):
+            raise serializers.ValidationError(
+                {'date': 'Date must be on or after cycle start date and before the same day next month.'}
+            )
 
         if expense_type == Expense.TYPE_INSTALLMENT:
             raise serializers.ValidationError(
@@ -98,10 +112,12 @@ class ExpenseSingleUpdateSerializer(serializers.ModelSerializer):
         required=False,
     )
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    description = serializers.CharField(max_length=120, required=False)
+    date = serializers.DateField(required=False)
 
     class Meta:
         model = Expense
-        fields = ('expense_category', 'amount')
+        fields = ('expense_category', 'amount', 'description', 'date')
 
     def validate(self, attrs):
         if self.instance.type != Expense.TYPE_SINGLE:
@@ -109,13 +125,13 @@ class ExpenseSingleUpdateSerializer(serializers.ModelSerializer):
                 "Only expenses with type 'single_expense' can be edited directly."
             )
 
-        allowed_fields = {'expense_category', 'amount'}
+        allowed_fields = {'expense_category', 'amount', 'description', 'date'}
         sent_fields = set(self.initial_data.keys())
         if not sent_fields:
             raise serializers.ValidationError('At least one field must be provided.')
         if sent_fields - allowed_fields:
             raise serializers.ValidationError(
-                "Only 'expense_category' and 'amount' can be updated for single expenses."
+                "Only 'expense_category', 'amount', 'description' and 'date' can be updated for single expenses."
             )
 
         category = attrs.get('expense_category')
@@ -127,5 +143,21 @@ class ExpenseSingleUpdateSerializer(serializers.ModelSerializer):
         amount = attrs.get('amount')
         if amount is not None and amount <= 0:
             raise serializers.ValidationError({'amount': 'Amount must be greater than zero.'})
+
+        description = attrs.get('description')
+        if description is not None:
+            normalized_description = description.strip()
+            if not normalized_description:
+                raise serializers.ValidationError({'description': 'Description is required.'})
+            attrs['description'] = normalized_description
+
+        expense_date = attrs.get('date')
+        if expense_date is not None:
+            cycle_start = self.instance.expense_cycle.start_date
+            cycle_next_month_start = _add_one_month(cycle_start)
+            if not (cycle_start <= expense_date < cycle_next_month_start):
+                raise serializers.ValidationError(
+                    {'date': 'Date must be on or after cycle start date and before the same day next month.'}
+                )
 
         return attrs

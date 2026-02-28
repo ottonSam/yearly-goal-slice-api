@@ -1,0 +1,76 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = REPLACE_WITH_ACCESS_TOKEN
+@goalCalendarId = 00000000-0000-0000-0000-000000000000
+@objectiveId = 00000000-0000-0000-0000-000000000000
+
+
+### Objective types
+GET {{baseUrl}}/objectives/types/
+Authorization: Bearer {{access}}
+
+### Create objective (GOAL_CALENDAR)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "GOAL_CALENDAR",
+  "goal_calendar": "{{goalCalendarId}}",
+  "title": "Sprint week 1",
+  "description": "Entregar backlog da semana"
+}
+
+### Create objective (LONG_TERM)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "LONG_TERM",
+  "title": "Long term objective",
+  "description": "This is a long term objective"
+}
+
+### Create objective (MEDIUM_TERM)
+POST {{baseUrl}}/objectives/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "MEDIUM_TERM",
+  "title": "Medium term objective",
+  "description": "This is a medium term objective"
+}
+
+### List objectives by type
+GET {{baseUrl}}/objectives/type/LONG_TERM/
+Authorization: Bearer {{access}}
+
+### List objectives by goal calendar
+GET {{baseUrl}}/objectives/goal-calendar/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+### Objective detail
+GET {{baseUrl}}/objectives/{{objectiveId}}/
+Authorization: Bearer {{access}}
+
+### Update objective (PUT)
+PUT {{baseUrl}}/objectives/{{objectiveId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "objective_type": "LONG_TERM",
+  "title": "Long term objective updated",
+  "description": "Updated objective description"
+}
+
+### Complete objective (body must be empty)
+POST {{baseUrl}}/objectives/{{objectiveId}}/complete/
+Authorization: Bearer {{access}}
+
+### Delete objective (soft delete)
+DELETE {{baseUrl}}/objectives/{{objectiveId}}/
+Authorization: Bearer {{access}}

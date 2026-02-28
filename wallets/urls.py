@@ -17,8 +17,16 @@ router.register('wallets/installment-series', InstallmentSerieViewSet, basename=
 router.register('wallets', WalletViewSet, basename='wallet')
 
 expense_list_create_view = ExpenseViewSet.as_view({'get': 'list', 'post': 'create'})
+expense_single_update_view = ExpenseViewSet.as_view({'patch': 'update_single'})
+expense_cancel_recurring_view = ExpenseViewSet.as_view({'post': 'cancel_recurring'})
 
 urlpatterns = [
     path('wallets/expenses/', expense_list_create_view, name='wallet-expense-list-create'),
+    path('wallets/expenses/<uuid:pk>/', expense_single_update_view, name='wallet-expense-single-update'),
+    path(
+        'wallets/expenses/<uuid:pk>/cancel-recurring/',
+        expense_cancel_recurring_view,
+        name='wallet-expense-cancel-recurring',
+    ),
 ]
 urlpatterns += router.urls

@@ -1,0 +1,45 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = REPLACE_WITH_ACCESS_TOKEN
+@goalCalendarId = 00000000-0000-0000-0000-000000000000
+@calendarStartDate = 2026-03-09
+
+
+### Create goal calendar
+POST {{baseUrl}}/goal-calendars/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Roadmap Q1",
+  "num_weeks": 12,
+  "start_date": "{{calendarStartDate}}"
+}
+
+### List goal calendars
+GET {{baseUrl}}/goal-calendars/
+Authorization: Bearer {{access}}
+
+### Goal calendar detail
+GET {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+### Update goal calendar (PUT)
+PUT {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Roadmap Q2",
+  "num_weeks": 6,
+  "start_date": "2026-04-06"
+}
+
+### Delete goal calendar (soft delete)
+DELETE {{baseUrl}}/goal-calendars/{{goalCalendarId}}/
+Authorization: Bearer {{access}}
+
+### List weeks by goal calendar
+GET {{baseUrl}}/goal-calendars/{{goalCalendarId}}/weeks/
+Authorization: Bearer {{access}}

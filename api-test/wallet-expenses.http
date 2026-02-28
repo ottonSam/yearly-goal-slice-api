@@ -1,0 +1,56 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMjQ4MDM2LCJpYXQiOjE3NzIyNDcxMzYsImp0aSI6ImU1ZmU0NzljYjNhZTQyNDA4ODI0OGI5NGRkOTNkZWVkIiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.PWJaHHlQaNUr0y2fKKAOrhiDcC5d89mDfKCphcdvv3Y
+@expenseCategoryId = acaacbfa-9f45-4f67-ad01-59507029d68c
+@expenseCycleId = 2c5e5d9c-54f1-424b-be07-776f7cee6e6a
+@singleExpenseId = f2db72d4-c079-4e68-a5af-f20da3e8b1ff
+@recurringExpenseId = fb7aad1a-1028-4cc1-9ed6-632d5ace959d
+
+### Create single expense
+POST {{baseUrl}}/wallets/expenses/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "expense_cycle": "{{expenseCycleId}}",
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Mercado",
+  "amount": "150.00",
+  "type": "single_expense",
+  "date": "2026-03-25"
+}
+
+### Create recurring expense
+POST {{baseUrl}}/wallets/expenses/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "expense_cycle": "{{expenseCycleId}}",
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Academia",
+  "amount": "99.90",
+  "type": "recurring_expense",
+  "date": "2026-03-07"
+}
+
+### Update single expense (expense_category, amount, description and/or date)
+PATCH {{baseUrl}}/wallets/expenses/{{singleExpenseId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Mercado atualizado",
+  "amount": "180.00",
+  "date": "2026-03-24"
+}
+
+### Cancel recurring expense series (remove root cycle and forward)
+POST {{baseUrl}}/wallets/expenses/{{recurringExpenseId}}/cancel-recurring/
+Authorization: Bearer {{access}}
+
+### List expenses by cycle (query param required)
+GET {{baseUrl}}/wallets/expenses/?expense_cycle={{expenseCycleId}}
+Authorization: Bearer {{access}}

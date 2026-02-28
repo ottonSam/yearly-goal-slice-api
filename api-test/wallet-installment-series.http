@@ -1,0 +1,39 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMjQ2MTM2LCJpYXQiOjE3NzIyNDUyMzYsImp0aSI6IjU4YjUwNjc3MDQ2YzRmNjRhMWYwZGI3OTIxN2IyNzQ0IiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.NHW5EaeaPoS21A5w8-CI_IGGNTIlX8SfK4pS655eQ7I
+@walletId = 98b8b431-285b-41ff-bf5a-d4fbb3c0be90
+@expenseCategoryId = acaacbfa-9f45-4f67-ad01-59507029d68c
+@installmentSerieId = 83c943c1-b056-4725-a8be-f6006682c75e
+
+### Create installment series
+POST {{baseUrl}}/wallets/installment-series/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "wallet": "{{walletId}}",
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Notebook",
+  "total_amount": "2400.00",
+  "installments_count": 4,
+  "start_date": "2026-03-10"
+}
+
+### Replace installment series (PUT)
+PUT {{baseUrl}}/wallets/installment-series/{{installmentSerieId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "wallet": "{{walletId}}",
+  "expense_category": "{{expenseCategoryId}}",
+  "description": "Notebook atualizado",
+  "total_amount": "2200.00",
+  "installments_count": 10,
+  "start_date": "2026-03-10"
+}
+
+### Delete installment series
+DELETE {{baseUrl}}/wallets/installment-series/{{installmentSerieId}}/
+Authorization: Bearer {{access}}
