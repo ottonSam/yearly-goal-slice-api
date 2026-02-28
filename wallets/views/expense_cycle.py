@@ -10,12 +10,14 @@ from rest_framework.response import Response
 from wallets.models import ExpenseCycle, Wallet
 from wallets.permissions import IsOwner
 from wallets.serializers import (
+    ExpenseCycleBillingSummarySerializer,
     ExpenseCycleDetailSerializer,
     ExpenseCycleReadSerializer,
     ExpenseCycleResolveSerializer,
     ExpenseCycleUpdateSerializer,
 )
 from wallets.services.expense_cycle import compute_cycle_for_date, compute_cycle_for_month
+from wallets.services.expense_cycle_billing import build_expense_cycle_billing_snapshot
 from wallets.services.expense import materialize_recurring_expenses_for_cycle
 
 
@@ -170,6 +172,19 @@ class ExpenseCycleViewSet(
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(ExpenseCycleReadSerializer(instance).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary='Retrieve cycle billing summary',
+        operation_description='Returns billing totals, per-category spending and remaining daily limit for the cycle.',
+        responses={200: ExpenseCycleBillingSummarySerializer},
+        tags=['Wallet Expense Cycles'],
+    )
+    @action(detail=True, methods=['get'], url_path='billing-summary')
+    def billing_summary(self, request, *args, **kwargs):
+        cycle = self.get_object()
+        snapshot = build_expense_cycle_billing_snapshot(cycle=cycle)
+        serializer = ExpenseCycleBillingSummarySerializer(snapshot)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         operation_summary='List expense cycles',

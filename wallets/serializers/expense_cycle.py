@@ -94,3 +94,32 @@ class ExpenseCycleUpdateSerializer(serializers.ModelSerializer):
         if any(field in self.initial_data for field in {'wallet', 'month', 'start_date', 'end_date'}):
             raise serializers.ValidationError("Only the 'limit' field can be updated.")
         return attrs
+
+
+class ExpenseCycleCategorySpendingSerializer(serializers.Serializer):
+    category_id = serializers.UUIDField(read_only=True)
+    category_name = serializers.CharField(read_only=True)
+    category_icon = serializers.CharField(read_only=True)
+    category_color = serializers.CharField(read_only=True)
+    total_spent = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+
+
+class ExpenseCycleBillingSummarySerializer(serializers.Serializer):
+    total_cycle_spent = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    spending_by_category = ExpenseCycleCategorySpendingSerializer(many=True, read_only=True)
+    total_cycle_installment_spent = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    total_cycle_recurring_spent = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    total_future_installment_spent = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    remaining_limit_per_day = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        read_only=True,
+    )
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('remaining_limit_per_day') is None:
+            data.pop('remaining_limit_per_day', None)
+        return data

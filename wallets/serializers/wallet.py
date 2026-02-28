@@ -1,12 +1,38 @@
 from decimal import Decimal
 
+from django.utils import timezone
 from rest_framework import serializers
 
 from wallets.models import Wallet
+from wallets.services.wallet import compute_wallet_remaining_limits
 
 
 class WalletReadSerializer(serializers.ModelSerializer):
     user = serializers.UUIDField(read_only=True, source='user_id', help_text='Wallet owner user ID.')
+    remaining_total_limit = serializers.SerializerMethodField(
+        help_text='Wallet remaining total limit (wallet limit - current cycle spent - future cycles spent).'
+    )
+    remaining_cycle_limit = serializers.SerializerMethodField(
+        help_text='Current cycle remaining limit (current cycle limit - current cycle spent).'
+    )
+
+    def _get_wallet_limit_snapshot(self, wallet: Wallet):
+        cache = getattr(self, '_wallet_limit_snapshot_cache', None)
+        if cache is None:
+            cache = {}
+            self._wallet_limit_snapshot_cache = cache
+
+        snapshot = cache.get(wallet.id)
+        if snapshot is None:
+            snapshot = compute_wallet_remaining_limits(wallet=wallet, reference_date=timezone.localdate())
+            cache[wallet.id] = snapshot
+        return snapshot
+
+    def get_remaining_total_limit(self, obj):
+        return self._get_wallet_limit_snapshot(obj).remaining_total_limit
+
+    def get_remaining_cycle_limit(self, obj):
+        return self._get_wallet_limit_snapshot(obj).remaining_cycle_limit
 
     class Meta:
         model = Wallet
@@ -16,6 +42,8 @@ class WalletReadSerializer(serializers.ModelSerializer):
             'name',
             'limit',
             'cycle_limit_default',
+            'remaining_total_limit',
+            'remaining_cycle_limit',
             'cycle_starts',
             'cycle_ends',
             'active',
