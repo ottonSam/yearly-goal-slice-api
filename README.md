@@ -1,75 +1,138 @@
 Yearly Goal Slice API
 =====================
 
-API em Django para cadastro de usuarios, calendarios de metas semanais e objetivos vinculados ou nao a esses calendarios. Inclui autenticacao via JWT e documentacao Swagger/Redoc.
+API Django/DRF para gestao de metas anuais com ciclos semanais, objetivos e controle financeiro por carteira (`wallets`), com autenticacao JWT e documentacao Swagger/Redoc.
+
+Stack principal
+---------------
+- Python `>=3.10`
+- Django `4.2.16`
+- Django REST Framework `3.16.1`
+- SimpleJWT `5.4.0`
+- drf-yasg `1.21.7`
+- django-cors-headers `4.4.0`
+
+Estrutura de modulos
+--------------------
+- `accounts`: cadastro/autenticacao, verificacao de email e perfil.
+- `goal_calendars`: calendarios, semanas, atividades e progresso semanal.
+- `objectives`: objetivos por tipo e por calendario.
+- `wallets`: carteiras, categorias, ciclos de fatura, despesas, recorrencias e parcelamentos.
 
 Como rodar localmente
 ---------------------
-- Instale o `uv` (via `pip`): `pip install uv`
-- Crie o ambiente virtual: `uv venv .venv`
-- Ative: `source .venv/bin/activate`
-- Instale dependencias: `uv sync`
-- Aplique migracoes (cria o banco SQLite em `db.sqlite3`): `python manage.py migrate`
-- Crie um superuser (opcional, para admin): `python manage.py createsuperuser`
-- Suba o servidor: `python manage.py runserver`
-- Documentacao interativa: `http://localhost:8000/swagger/` ou `http://localhost:8000/redoc/`
+1. Instale o `uv` (se necessario): `pip install uv`
+2. Crie e ative o ambiente virtual:
+   - `uv venv .venv`
+   - `source .venv/bin/activate`
+3. Instale dependencias: `uv sync`
+4. Aplique migracoes: `python manage.py migrate`
+5. (Opcional) Crie superuser: `python manage.py createsuperuser`
+6. Suba a API: `python manage.py runserver`
 
-Principais dependencias
------------------------
-- Django 4.2.16
-- Django REST Framework
-- djangorestframework-simplejwt (JWT)
-- drf-yasg (Swagger/Redoc)
+Documentacao local
+------------------
+- Swagger UI: `http://localhost:8000/swagger/`
+- Redoc: `http://localhost:8000/redoc/`
+- Admin: `http://localhost:8000/admin/`
 
-Modulos e responsabilidades
----------------------------
-- accounts: modelo de usuario com UUID como chave primaria; endpoints de registro, login/refresh via JWT e consulta do usuario autenticado.
-- goal_calendars: calendarios semanais de metas por usuario; calcula data final; soft-delete via `active`; inclui semanas geradas automaticamente (GoalCalendarWeek) e weekly activities com tres metricas (frequencia, quantidade ou dias especificos), progresso por metrica e relatorio semanal agregado.
-- objectives: objetivos de longo/medio prazo ou atrelados a um calendario; validacoes para evitar duplicidades ativas e garantir vinculo correto com calendarios do proprio usuario; soft-delete e marca de conclusao.
+Variaveis de ambiente importantes
+---------------------------------
+- `DJANGO_SECRET_KEY`
+- `DJANGO_DEBUG`
+- `DJANGO_ALLOWED_HOSTS`
+- `DJANGO_DB_ENGINE`, `DJANGO_DB_NAME`, `DJANGO_DB_USER`, `DJANGO_DB_PASSWORD`, `DJANGO_DB_HOST`, `DJANGO_DB_PORT`
+- `DJANGO_USE_SQLITE_FOR_TESTS` (padrao: `True`)
+- `CORS_ALLOWED_ORIGINS`
+- `APP_ENV` (`dev`/`prod`)
+- `SMTP_*` (quando `APP_ENV=prod`)
+- `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL` (relatorio AI semanal)
 
-Rotas principais (prefixo `/api/v1/`)
--------------------------------------
-- Autenticacao
-  - `POST /auth/register/` cria usuario (username, email, senha, nome, sobrenome).
-  - `POST /auth/login/` retorna `access` e `refresh`.
-  - `POST /auth/refresh/` renova token.
-  - `GET /auth/me/` dados do usuario autenticado.
-  - `PUT /auth/update-profile/` atualiza perfil do usuario autenticado (nome e sobrenome).
-  - `PUT /auth/change-password/` altera senha do usuario autenticado.
-- Goal calendars
-  - `GET/POST /goal-calendars/` lista/cria calendarios do usuario logado.
-  - `GET/PUT/DELETE /goal-calendars/<uuid>/` recupera, atualiza ou inativa (soft-delete) um calendario do usuario.
-  - `GET /goal-calendars/<goal_calendar_id>/weeks/` lista semanas ativas do calendario.
-- Weekly activities (metas semanais dentro de um calendario)
-  - `GET /goal-calendars/activities/metric-types/` lista os tipos de metricas disponiveis.
-  - `GET/POST /goal-calendars/weeks/<week_id>/activities/` lista/cria atividades da semana.
-  - `GET/PUT/PATCH /goal-calendars/weeks/<week_id>/activities/<uuid>/` consulta/edita atividade.
-  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/frequency/` incrementa progresso de frequencia (`day`).
-  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/quantity/` soma progresso de quantidade (`amount`).
-  - `POST /goal-calendars/weeks/<week_id>/activities/<uuid>/progress/specific-days/` marca dia concluido para metricas de dias especificos (`day`).
-  - `GET /goal-calendars/weeks/<week_id>/activities/report/` relatorio percentual por atividade e media geral da semana.
-  - Parametros
-    - `goal_calendar_id`, `week_id` e `uuid` sao UUIDs.
-  - Bodies (resumo)
-    - Criar atividade: inclui `title`, `metric_type` e o alvo correspondente (`target_frequency`, `target_quantity` ou `specific_days`).
-    - Progresso de frequencia: body com `day` (weekday em ingles, ex.: `monday`).
-    - Progresso de quantidade: body com `amount` (numero).
-    - Progresso de dias especificos: body com `day` (weekday em ingles, ex.: `monday`).
-- Objectives
-  - `GET /objectives/types/` lista os tipos disponiveis.
-  - `POST /objectives/` cria objetivo para o usuario logado.
-  - `GET /objectives/type/<objective_type>/` lista objetivos ativos filtrados por tipo (`LONG_TERM`, `MEDIUM_TERM`, `GOAL_CALENDAR`).
-  - `GET /objectives/goal-calendar/<uuid>/` lista objetivos vinculados a um calendario ativo do usuario.
-  - `GET/PUT/DELETE /objectives/<uuid>/` recupera/edita/inativa objetivo.
-  - `POST /objectives/<uuid>/complete/` marca objetivo como concluido.
-
-Configuracoes e comportamento
+Rotas principais (`/api/v1/`)
 -----------------------------
-- Banco: SQLite (arquivo `db.sqlite3`).
-- Auth: `rest_framework_simplejwt.authentication.JWTAuthentication`; permissoes padrao exigem usuario autenticado.
-- Internacionalizacao: `TIME_ZONE=America/Sao_Paulo`, `USE_TZ=True`.
-- Admin: painel nativo em `/admin/`.
+
+Autenticacao (`accounts`)
+-------------------------
+- `POST /auth/register/`
+- `POST /auth/verify-email/`
+- `POST /auth/login/`
+- `POST /auth/refresh/`
+- `GET /auth/me/`
+- `PUT/PATCH /auth/update-profile/`
+- `POST /auth/change-password/`
+
+Goal calendars e weekly activities (`goal_calendars`)
+-----------------------------------------------------
+- `GET/POST /goal-calendars/`
+- `GET/PUT/DELETE /goal-calendars/<uuid:pk>/`
+- `GET /goal-calendars/<uuid:goal_calendar_id>/weeks/`
+- `GET /goal-calendars/activities/metric-types/`
+- `GET/POST /goal-calendars/weeks/<uuid:week_id>/activities/`
+- `GET/PUT /goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/`
+- `POST /goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/progress/frequency/`
+- `POST /goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/progress/quantity/`
+- `POST /goal-calendars/weeks/<uuid:week_id>/activities/<uuid:pk>/progress/specific-days/`
+- `GET /goal-calendars/weeks/<uuid:week_id>/activities/report/`
+- `POST /goal-calendars/weeks/<uuid:week_id>/activities/report/ai/`
+
+Objectives (`objectives`)
+-------------------------
+- `POST /objectives/`
+- `GET /objectives/types/`
+- `GET /objectives/type/<str:objective_type>/`
+- `GET /objectives/goal-calendar/<uuid:goal_calendar_id>/`
+- `GET/PUT/DELETE /objectives/<uuid:pk>/`
+- `POST /objectives/<uuid:pk>/complete/`
+
+Wallets (`wallets`)
+-------------------
+- Carteiras:
+  - `GET/POST /wallets/`
+  - `GET/PUT/PATCH/DELETE /wallets/<uuid:pk>/`
+  - Campos calculados na leitura: `remaining_total_limit`, `remaining_cycle_limit`
+- Categorias:
+  - `GET/POST /wallets/categories/`
+  - `GET/PUT/PATCH/DELETE /wallets/categories/<uuid:pk>/`
+- Ciclos:
+  - `POST /wallets/cycle/resolve/` (por `date` ou `month`)
+  - `GET /wallets/cycle/?wallet=<wallet_id>`
+  - `GET /wallets/cycle/<uuid:pk>/`
+  - `GET /wallets/cycle/<uuid:pk>/billing-summary/`
+  - `PUT/PATCH /wallets/cycle/<uuid:pk>/` (somente `limit`)
+- Despesas:
+  - `GET/POST /wallets/expenses/?expense_cycle=<cycle_id>`
+  - `PATCH /wallets/expenses/<uuid:pk>/` (somente despesas `single_expense`)
+  - `POST /wallets/expenses/<uuid:pk>/cancel-recurring/`
+- Parcelamentos:
+  - `POST /wallets/installment-series/`
+  - `PUT /wallets/installment-series/<uuid:pk>/`
+  - `DELETE /wallets/installment-series/<uuid:pk>/`
+
+Observacoes de negocio (wallets)
+--------------------------------
+- Ciclos podem cruzar mes (`cycle_starts` diferente de `cycle_ends`).
+- `remaining_total_limit` considera limite total da carteira menos:
+  - total gasto no ciclo atual
+  - gastos de ciclos futuros apenas de `single_expense` e `installment_expense`
+- `remaining_cycle_limit` considera limite do ciclo atual menos total gasto do ciclo atual.
+- `billing-summary` inclui:
+  - total do ciclo
+  - total por categoria
+  - total de parcelamento do ciclo
+  - total de recorrencia do ciclo
+  - total de parcelamento futuro
+  - `remaining_limit_per_day` somente quando a data atual estiver entre `start_date` e `end_date` do ciclo.
+
+Colecoes de teste
+-----------------
+- Requests HTTP de exemplo em `api-test/`:
+  - `wallets.http`
+  - `wallet-cycles.http`
+  - `wallet-expenses.http`
+  - `wallet-categories.http`
+  - `wallet-installment-series.http`
 
 Testes
 ------
-Rodar testes unitarios: `python manage.py test`
+- Suite completa: `python manage.py test`
+- Modulo wallets: `python manage.py test wallets.tests`
