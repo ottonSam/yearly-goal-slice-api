@@ -1,0 +1,109 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = REPLACE_WITH_ACCESS_TOKEN
+@weekId = 00000000-0000-0000-0000-000000000000
+@frequencyActivityId = 00000000-0000-0000-0000-000000000000
+@quantityActivityId = 00000000-0000-0000-0000-000000000000
+@specificDaysActivityId = 00000000-0000-0000-0000-000000000000
+
+
+### Activity metric types
+GET {{baseUrl}}/goal-calendars/activities/metric-types/
+Authorization: Bearer {{access}}
+
+### List activities by week
+GET {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+
+### Create activity (FREQUENCY)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Gym",
+  "description": "3x per week",
+  "metric_type": "FREQUENCY",
+  "target_frequency": 3
+}
+
+### Create activity (QUANTITY)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Commits",
+  "description": "Target commits",
+  "metric_type": "QUANTITY",
+  "target_quantity": 20
+}
+
+### Create activity (SPECIFIC_DAYS)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Study",
+  "description": "Specific study days",
+  "metric_type": "SPECIFIC_DAYS",
+  "specific_days": ["monday", "wednesday", "friday"]
+}
+
+### Activity detail
+GET {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{frequencyActivityId}}/
+Authorization: Bearer {{access}}
+
+### Update activity (PUT)
+PUT {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{frequencyActivityId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "title": "Gym Updated",
+  "description": "4x per week",
+  "metric_type": "FREQUENCY",
+  "target_frequency": 4
+}
+
+### Progress frequency activity
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{frequencyActivityId}}/progress/frequency/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "day": "monday"
+}
+
+### Progress quantity activity
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{quantityActivityId}}/progress/quantity/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "amount": 5
+}
+
+### Progress specific-days activity
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/{{specificDaysActivityId}}/progress/specific-days/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "day": "wednesday"
+}
+
+### Weekly report
+GET {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/report/
+Authorization: Bearer {{access}}
+
+### Weekly AI report (week must have ended and not have a report yet)
+POST {{baseUrl}}/goal-calendars/weeks/{{weekId}}/activities/report/ai/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "reflection": "Tive boa consistencia no inicio da semana, mas perdi ritmo no meio e recuperei no final."
+}

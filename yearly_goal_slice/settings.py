@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'accounts',
     'goal_calendars',
     'objectives',
+    'wallets',
 ]
 
 MIDDLEWARE = [

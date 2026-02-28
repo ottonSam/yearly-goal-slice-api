@@ -1,0 +1,54 @@
+@rootUrl = http://localhost:8000
+@baseUrl = {{rootUrl}}/api/v1
+
+@access = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMjQ2MTM2LCJpYXQiOjE3NzIyNDUyMzYsImp0aSI6IjU4YjUwNjc3MDQ2YzRmNjRhMWYwZGI3OTIxN2IyNzQ0IiwidXNlcl9pZCI6IjI5NmI2YzBiLTAwMTctNDFkNi04MWNjLWVjOWQ5YjZiYjhjMiJ9.NHW5EaeaPoS21A5w8-CI_IGGNTIlX8SfK4pS655eQ7I
+@walletId = 8aaa2cd6-1877-4f45-925c-17dbc9908671
+
+
+### Create wallet
+POST {{baseUrl}}/wallets/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "name": "Wallet Principal",
+  "limit": "5000.00",
+  "cycle_limit_default": "3000.00",
+  "cycle_starts": 25,
+  "cycle_ends": 9
+}
+
+### List wallets
+GET {{baseUrl}}/wallets/
+Authorization: Bearer {{access}}
+
+### Wallet detail
+GET {{baseUrl}}/wallets/{{walletId}}/
+Authorization: Bearer {{access}}
+
+### Update wallet (PUT)
+PUT {{baseUrl}}/wallets/{{walletId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "name": "Wallet Principal Atualizada",
+  "limit": "5500.00",
+  "cycle_limit_default": "3200.00",
+  "cycle_starts": 25,
+  "cycle_ends": 10
+}
+
+### Update wallet (PATCH)
+PATCH {{baseUrl}}/wallets/{{walletId}}/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "name": "Wallet Principal Patch",
+  "cycle_limit_default": "3100.00"
+}
+
+### Delete wallet (soft delete)
+DELETE {{baseUrl}}/wallets/{{walletId}}/
+Authorization: Bearer {{access}}
