@@ -1,4 +1,6 @@
+from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -169,6 +171,103 @@ class WalletAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['user'], str(self.user.id))
+
+    def test_list_includes_remaining_limits_and_ignores_future_recurring_expenses(self):
+        wallet = Wallet.objects.create(
+            user=self.user,
+            name='Wallet Limites',
+            limit=Decimal('500.00'),
+            cycle_limit_default=Decimal('300.00'),
+            cycle_starts=1,
+            cycle_ends=28,
+        )
+        category = ExpenseCategory.objects.create(
+            user=self.user,
+            name='Alimentacao',
+            icon='mdi:food',
+            color='#FF6B00',
+        )
+        current_cycle = ExpenseCycle.objects.create(
+            wallet=wallet,
+            month='2026-02-01',
+            limit=Decimal('300.00'),
+            start_date='2026-02-01',
+            end_date='2026-02-28',
+        )
+        future_cycle = ExpenseCycle.objects.create(
+            wallet=wallet,
+            month='2026-03-01',
+            limit=Decimal('300.00'),
+            start_date='2026-03-01',
+            end_date='2026-03-28',
+        )
+        installment_serie = InstallmentSerie.objects.create(
+            wallet=wallet,
+            expense_category=category,
+            description='Parcelamento teste',
+            total_amount=Decimal('150.00'),
+            installments_count=2,
+            start_date='2026-02-20',
+        )
+
+        Expense.objects.create(
+            expense_cycle=current_cycle,
+            expense_category=category,
+            description='Current single',
+            amount=Decimal('200.00'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-02-10',
+        )
+        Expense.objects.create(
+            expense_cycle=current_cycle,
+            expense_category=category,
+            description='Current recurring',
+            amount=Decimal('150.00'),
+            type=Expense.TYPE_RECURRING,
+            date='2026-02-12',
+        )
+        Expense.objects.create(
+            expense_cycle=current_cycle,
+            expense_category=category,
+            installment_serie=installment_serie,
+            description='Current installment',
+            amount=Decimal('100.00'),
+            type=Expense.TYPE_INSTALLMENT,
+            date='2026-02-20',
+        )
+        Expense.objects.create(
+            expense_cycle=future_cycle,
+            expense_category=category,
+            description='Future recurring',
+            amount=Decimal('999.00'),
+            type=Expense.TYPE_RECURRING,
+            date='2026-03-10',
+        )
+        Expense.objects.create(
+            expense_cycle=future_cycle,
+            expense_category=category,
+            description='Future single',
+            amount=Decimal('70.00'),
+            type=Expense.TYPE_SINGLE,
+            date='2026-03-12',
+        )
+        Expense.objects.create(
+            expense_cycle=future_cycle,
+            expense_category=category,
+            installment_serie=installment_serie,
+            description='Future installment',
+            amount=Decimal('50.00'),
+            type=Expense.TYPE_INSTALLMENT,
+            date='2026-03-18',
+        )
+
+        with patch('wallets.serializers.wallet.timezone.localdate', return_value=date(2026, 2, 15)):
+            response = self.client.get('/api/v1/wallets/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['remaining_total_limit'], Decimal('-70.00'))
+        self.assertEqual(response.data[0]['remaining_cycle_limit'], Decimal('-150.00'))
 
 
 class ExpenseCategoryAPITests(APITestCase):
